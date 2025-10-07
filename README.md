@@ -1,4 +1,4 @@
-# LUCID: Literature Understanding and Consolidation for Intelligent Discovery
+# Full-Stack LLMs Vibe Coding Project
 ## Setup
 - `python3 -m venv venv`
 - `source venv/bin/activate`
