@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Interface</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    .container { max-width: 800px; margin: 0 auto; display: grid; gap: 16px; }
+    label { font-weight: 600; }
+    textarea { width: 100%; min-height: 120px; padding: 8px; font: inherit; }
+    input[type="file"] { padding: 6px 0; }
+    .actions { display: flex; gap: 8px; align-items: center; }
+    button { padding: 8px 12px; font: inherit; cursor: pointer; }
+    .output-box { border: 1px solid #ccc; border-radius: 6px; padding: 12px; min-height: 160px; background: #fafafa; }
+    .row { display: grid; gap: 8px; }
+  </style>
+  <!--
+    Minimal HTML-only scaffold for an LLM-like interface.
+    - Prompt textarea for user input
+    - File input to attach local files (multiple)
+    - Enter button to submit prompt (alerts for now)
+    - Output box to display model responses (placeholder for now)
+  -->
+</head>
+<body>
+  <main class="container" role="main">
+    <h1>Interface </h1>
+
+    <section class="row" aria-labelledby="prompt-label">
+      <label id="prompt-label" for="prompt-input">Your prompt</label>
+      <textarea id="prompt-input" name="prompt" placeholder="Type your question to the LLM..."></textarea>
+      <div class="actions">
+        <button id="enter-button" type="button" aria-label="Send prompt">Enter</button>
+      </div>
+    </section>
+
+    <section class="row" aria-labelledby="files-label">
+      <label id="files-label" for="file-input">Attach files (optional)</label>
+      <input id="file-input" type="file" name="files" multiple />
+    </section>
+
+    <section class="row" aria-labelledby="output-label">
+      <label id="output-label" for="output-box">LLM output</label>
+      <div id="output-box" class="output-box" aria-live="polite" aria-atomic="false">
+        <p><em>Model responses will appear here.</em></p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const textarea = document.getElementById('prompt-input');
+      const button = document.getElementById('enter-button');
+
+      async function submitPrompt() {
+        const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
+        try {
+          await fetch('/api/prompt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: value })
+          });
+        } catch (err) {
+          // swallow errors for now
+        }
+      }
+
+      if (button) {
+        button.addEventListener('click', submitPrompt);
+      }
+
+      if (textarea) {
+        textarea.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || !e.shiftKey)) {
+            e.preventDefault();
+            submitPrompt();
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
