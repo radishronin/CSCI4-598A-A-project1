@@ -400,6 +400,26 @@
       let currentLLMChoice = '';
       let currentPrompt = '';
 
+      function setOutput(text) {
+        const box = document.getElementById('output-box');
+        if (!box) return;
+        box.innerHTML = '';
+        const p = document.createElement('p');
+        p.textContent = text;
+        box.appendChild(p);
+      }
+
+      function appendOutput(text) {
+        const box = document.getElementById('output-box');
+        if (!box) return;
+        const p = box.querySelector('p') || (() => {
+          const el = document.createElement('p');
+          box.appendChild(el);
+          return el;
+        })();
+        p.textContent += text;
+      }
+
       async function submitPrompt() {
         const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
         const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
@@ -408,71 +428,47 @@
           alert('Please select an LLM.');
           return;
         }
-        
+
         currentLLMChoice = llmChoice;
         currentPrompt = value;
-        
+
+        // Clear output and show a small spinner text
+        setOutput('');
+
         try {
-          const response = await fetch('/api/prompt', {
+          const res = await fetch('/api/prompt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt: value, llm_choice: llmChoice })
           });
-          
-          const result = await response.json();
-          
-          if (!result.ok && result.error === "NO API key set.") {
-            showApiKeyModal(llmChoice);
+
+          // If API key missing, server returns JSON error; handle that first.
+          const contentType = res.headers.get('content-type') || '';
+          if (!res.ok && contentType.includes('application/json')) {
+            const payload = await res.json();
+            if (payload && payload.error === 'NO API key set.') {
+              showApiKeyModal(llmChoice);
+              return;
+            }
+            throw new Error(payload?.error || 'Request failed');
+          }
+
+          // Stream plain text chunks and append to the output box
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
+          if (!reader) {
+            throw new Error('Streaming not supported by this browser.');
+          }
+
+          while (true) {
+            const { done, value: chunk } = await reader.read();
+            if (done) break;
+            const text = decoder.decode(chunk, { stream: true });
+            if (text) appendOutput(text);
           }
         } catch (err) {
-          console.error('Error submitting prompt:', err);
-        }
-      }
-
-      function showApiKeyModal(llmChoice) {
-        const modal = document.getElementById('api-key-modal');
-        const message = document.getElementById('api-key-message');
-        const input = document.getElementById('api-key-input');
-        
-        message.textContent = `Please enter your API key for ${llmChoice.toUpperCase()}:`;
-        input.value = '';
-        modal.style.display = 'flex';
-        input.focus();
-      }
-
-      function hideApiKeyModal() {
-        const modal = document.getElementById('api-key-modal');
-        modal.style.display = 'none';
-      }
-
-      async function submitApiKey() {
-        const apiKey = document.getElementById('api-key-input').value.trim();
-        
-        if (!apiKey) {
-          alert('Please enter an API key.');
-          return;
-        }
-        
-        try {
-          const response = await fetch('/api/set-api-key', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              llm_choice: currentLLMChoice, 
-              api_key: apiKey 
-            })
-          });
-          
-          const result = await response.json();
-          
-          if (result.ok) {
-            hideApiKeyModal();
-          } else {
-            alert('Failed to set API key: ' + (result.error || 'Unknown error'));
-          }
-        } catch (err) {
-          console.error('Error setting API key:', err);
-          alert('Error setting API key. Please try again.');
+          console.error('Error streaming prompt:', err);
+          appendOutput('\\n[Error] ' + (err?.message || String(err)));
         }
       }
       

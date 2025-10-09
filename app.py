@@ -1,44 +1,69 @@
 """ A Flask application for LLM interaction. """
-from os import environ
-from flask import Flask, request, jsonify, render_template
+import os
+from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 app = Flask(__name__)
 
 ''' Constants '''
-GEMINI_MODEL = "gemini-2.0-flash-exp"
+GEMINI_MODEL = "gemini-2.0-flash"
 OPENAI_MODEL = "gpt-4o-mini"
 
-""" 
-TODO: set API keys to file reads instead of environment variables later. 
-The file read will be persistent and less annoying.
-"""
 def get_environment_api_key(llm_choice: str) -> str:
-    """ Get the API key for the selected LLM """
-    if llm_choice == "gemini":
-        if "GOOGLE_API_KEY" in environ:
-            return environ["GOOGLE_API_KEY"]
-    if llm_choice == "openai":
-        if "OPENAI_API_KEY" in environ:
-            return environ["OPENAI_API_KEY"]
-    return ""
+    """Get the API key for the selected LLM from ./api_keys/{llm_choice}"""
+    key_dir = os.path.join(".", "api_keys")
+    key_path = os.path.join(key_dir, llm_choice)
+    if not os.path.exists(key_path):
+        return ""
+    try:
+        with open(key_path, "r", encoding="utf-8") as f:
+            value = f.read().strip()
+            return value if value else ""
+    except OSError:
+        return ""
 
 def set_environment_api_key(llm_choice: str, api_key: str):
-    """ Set the API key for the selected LLM """
-    if llm_choice == "gemini":
-        environ["GOOGLE_API_KEY"] = api_key
-    if llm_choice == "openai":
-        environ["OPENAI_API_KEY"] = api_key
+    """Persist the API key for the selected LLM into ./api_keys/{llm_choice}"""
+    key_dir = os.path.join(".", "api_keys")
+    os.makedirs(key_dir, exist_ok=True)
+    key_path = os.path.join(key_dir, llm_choice)
+    # Overwrite any existing value with the new key
+    with open(key_path, "w", encoding="utf-8") as f:
+        f.write(api_key.strip())
 
 @app.route("/")
 def index():
     """ Render the index.html template """
     return render_template("index.html")
 
+def _message_to_text(msg) -> str:
+    """Extract plain text from message content which can be a str or list of parts."""
+    try:
+        content = getattr(msg, "content", msg)
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            # Concatenate text-like parts
+            parts = []
+            for p in content:
+                # parts may be dicts or objects with 'type'/'text' fields
+                if isinstance(p, dict):
+                    t = p.get("text") or p.get("content") or ""
+                    if isinstance(t, str):
+                        parts.append(t)
+                else:
+                    t = getattr(p, "text", None)
+                    if isinstance(t, str):
+                        parts.append(t)
+            return "".join(parts)
+        return str(content)
+    except Exception:
+        return ""
 
 @app.route("/api/prompt", methods=["POST"])
 def receive_prompt():
@@ -53,33 +78,45 @@ def receive_prompt():
     if llm_choice == "":
         return jsonify({"ok": False, "error": "SNO: no LLM selected."}), 400
 
-    api_key : str = get_environment_api_key(llm_choice)
-
+    api_key: str = get_environment_api_key(llm_choice)
     if api_key == "":
         return jsonify({"ok": False, "error": "NO API key set."}), 400
 
-    # Make Langchain agent depending on selected LLM.
     if llm_choice == "gemini":
-        langchain_llm : BaseChatModel = ChatGoogleGenerativeAI(
-            model = GEMINI_MODEL, 
-            google_api_key = environ["GEMINI_API_KEY"]
+        langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL,
+            google_api_key=api_key
         )
     elif llm_choice == "openai":
-        langchain_llm : BaseChatModel = ChatOpenAI(
-            model = OPENAI_MODEL,
-            api_key = environ["OPENAI_API_KEY"]
+        langchain_llm: BaseChatModel = ChatOpenAI(
+            model=OPENAI_MODEL,
+            api_key=api_key
         )
     else:
         return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
 
-    # TODO: Add tools later
-    langchain_agent : CompiledStateGraph = create_react_agent(
-      model = langchain_llm,
-      tools = []
+    langchain_agent: CompiledStateGraph = create_react_agent(
+        model=langchain_llm,
+        tools=[]
     )
-  
-    return jsonify({"ok": True})
 
+    @stream_with_context
+    def generate():
+        # Optional: small preamble so client can clear UI
+        yield ""
+
+        for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
+            msg = step["messages"][-1]
+
+            # Only yield if the message is from the AI (not Human)
+            if isinstance(msg, AIMessage):
+                text = _message_to_text(msg)
+                if text:
+                    yield text
+        # Optionally end with a newline
+        yield "\n"
+
+    return Response(generate(), mimetype="text/plain")
 
 @app.route("/api/set-api-key", methods=["POST"])
 def set_api_key():

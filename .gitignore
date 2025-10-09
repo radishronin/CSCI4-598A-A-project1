@@ -40,3 +40,6 @@ logs/
 
 # Node (if any frontend tooling is added later)
 node_modules/
+
+# Ignore API keys directory
+api_keys/
