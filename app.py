@@ -1,6 +1,6 @@
 """ A Flask application for LLM interaction. """
 import os
-from flask import Flask, request, jsonify, render_template, Response, stream_with_context
+from flask import Flask, request, jsonify, render_template
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langchain_core.language_models import BaseChatModel
@@ -72,51 +72,57 @@ def receive_prompt():
     2. Create Langchain agent, return response 
     """
     data = request.get_json(silent=True) or {}
-    prompt_text = data.get("prompt", "")
-    llm_choice = data.get("llm_choice", "")
 
-    if llm_choice == "":
-        return jsonify({"ok": False, "error": "SNO: no LLM selected."}), 400
+    prompt_text = (data.get("prompt") or "").strip()
+    if not prompt_text:
+        return jsonify({"error": "missing fields: prompt"}), 400
 
-    api_key: str = get_environment_api_key(llm_choice)
-    if api_key == "":
-        return jsonify({"ok": False, "error": "NO API key set."}), 400
+    provider = (data.get("provider") or data.get("llm_choice") or "openai").strip().lower() or "openai"
 
-    if llm_choice == "gemini":
-        langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
-            model=GEMINI_MODEL,
-            google_api_key=api_key
-        )
-    elif llm_choice == "openai":
-        langchain_llm: BaseChatModel = ChatOpenAI(
-            model=OPENAI_MODEL,
-            api_key=api_key
-        )
+    if provider not in {"openai", "gemini"}:
+        return jsonify({"error": f"unsupported provider: {provider}"}), 400
+
+    request_api_key = data.get("apiKey") or data.get("api_key") or ""
+    stored_api_key = get_environment_api_key(provider)
+
+    if provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY") or stored_api_key or request_api_key
     else:
-        return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or stored_api_key or request_api_key
 
-    langchain_agent: CompiledStateGraph = create_react_agent(
-        model=langchain_llm,
-        tools=[]
-    )
+    if not api_key:
+        return jsonify({"error": f"missing API key for provider: {provider}"}), 400
 
-    @stream_with_context
-    def generate():
-        # Optional: small preamble so client can clear UI
-        yield ""
+    try:
+        if provider == "gemini":
+            langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
+                model=GEMINI_MODEL,
+                google_api_key=api_key
+            )
+        else:
+            langchain_llm = ChatOpenAI(
+                model=OPENAI_MODEL,
+                api_key=api_key
+            )
 
+        langchain_agent: CompiledStateGraph = create_react_agent(
+            model=langchain_llm,
+            tools=[]
+        )
+
+        output_chunks: list[str] = []
         for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
             msg = step["messages"][-1]
-
-            # Only yield if the message is from the AI (not Human)
             if isinstance(msg, AIMessage):
                 text = _message_to_text(msg)
                 if text:
-                    yield text
-        # Optionally end with a newline
-        yield "\n"
+                    output_chunks.append(text)
 
-    return Response(generate(), mimetype="text/plain")
+        output_text = "".join(output_chunks).strip()
+    except Exception as exc:  # pragma: no cover - best effort error handling
+        return jsonify({"error": str(exc), "provider": provider}), 500
+
+    return jsonify({"output": output_text, "provider": provider})
 
 @app.route("/api/set-api-key", methods=["POST"])
 def set_api_key():
