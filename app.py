@@ -1,5 +1,7 @@
 """ A Flask application for LLM interaction. """
+import io
 import os
+import re
 from flask import Flask, request, jsonify, render_template
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
@@ -7,12 +9,64 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
+from pypdf import PdfReader
+from docx import Document
+from pptx import Presentation
+from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
 ''' Constants '''
 GEMINI_MODEL = "gemini-2.0-flash"
 OPENAI_MODEL = "gpt-4o-mini"
+MAX_CONTEXT_CHARS = 20_000
+
+LAST_DOC_TEXT = ""
+
+
+def extract_text(name: str, data: bytes) -> str:
+    """Extract plain text from supported document formats."""
+    ext = os.path.splitext(name or "")[1].lower()
+    text_chunks: list[str] = []
+
+    try:
+        if ext == ".pdf":
+            reader = PdfReader(io.BytesIO(data))
+            for page in reader.pages:
+                try:
+                    page_text = page.extract_text() or ""
+                except Exception:
+                    page_text = ""
+                if page_text:
+                    text_chunks.append(page_text)
+        elif ext == ".docx":
+            document = Document(io.BytesIO(data))
+            text_chunks.extend(paragraph.text for paragraph in document.paragraphs if paragraph.text)
+        elif ext == ".pptx":
+            presentation = Presentation(io.BytesIO(data))
+            for slide in presentation.slides:
+                for shape in slide.shapes:
+                    text = getattr(shape, "text", "")
+                    if text:
+                        text_chunks.append(text)
+        elif ext in {".html", ".htm"}:
+            soup = BeautifulSoup(data, "lxml")
+            text = soup.get_text(separator=" ")
+            if text:
+                text_chunks.append(text)
+        elif ext in {".txt", ".md"}:
+            text = data.decode("utf-8", "ignore")
+            if text:
+                text_chunks.append(text)
+        else:
+            text = data.decode("utf-8", "ignore")
+            if text:
+                text_chunks.append(text)
+    except Exception:
+        return ""
+
+    normalized = re.sub(r"\s+", " ", " ".join(text_chunks)).strip()
+    return normalized
 
 def get_environment_api_key(llm_choice: str) -> str:
     """Get the API key for the selected LLM from ./api_keys/{llm_choice}"""
@@ -85,6 +139,14 @@ def receive_prompt():
     request_api_key = data.get("apiKey") or data.get("api_key") or ""
     stored_api_key = get_environment_api_key(provider)
 
+    global LAST_DOC_TEXT
+    prompt_with_context = prompt_text
+    if LAST_DOC_TEXT:
+        prompt_with_context = (
+            "Use the following context to answer. If irrelevant, say so briefly.\n"
+            f"{LAST_DOC_TEXT}\n\nQuestion: {prompt_text}"
+        )
+
     if provider == "openai":
         api_key = os.getenv("OPENAI_API_KEY") or stored_api_key or request_api_key
     else:
@@ -111,7 +173,7 @@ def receive_prompt():
         )
 
         output_chunks: list[str] = []
-        for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
+        for step in langchain_agent.stream({"messages": [prompt_with_context]}, stream_mode="values"):
             msg = step["messages"][-1]
             if isinstance(msg, AIMessage):
                 text = _message_to_text(msg)
@@ -145,18 +207,48 @@ def set_api_key():
 
 @app.route("/api/upload-files", methods=["POST"])
 def upload_files():
-    """ Handle file uploads and print file information """
-    data = request.get_json(silent=True) or {}
-    files = data.get("file_paths", [])
-    print(f"[FILE_UPLOAD] Received {len(files)} file(s)")
+    """Handle multipart file uploads and load text into the context buffer."""
+    file_objects = list(request.files.getlist("files"))
+    alt_files = request.files.getlist("files[]")
+    if alt_files:
+        file_objects.extend(alt_files)
 
-    # For now, just print out files. Future: add to RAG architecture.
-    for i, file_info in enumerate(files, 1):
-        print(f"[FILE_UPLOAD] File {i}: {file_info.get('name', 'Unknown')} "
-              f"(Size: {file_info.get('size', 0)} bytes, "
-              f"Type: {file_info.get('type', 'Unknown')})")
-    
-    return jsonify({"ok": True, "message": f"Received {len(files)} file(s)"})
+    if not file_objects:
+        return jsonify({"error": "no files provided"}), 400
+
+    global LAST_DOC_TEXT
+    new_chunks: list[str] = []
+
+    for storage in file_objects:
+        try:
+            file_bytes = storage.read() or b""
+        except Exception:
+            file_bytes = b""
+        text = extract_text(storage.filename or "", file_bytes)
+        if text:
+            new_chunks.append(text)
+
+    if new_chunks:
+        buffer_text = "\n\n".join(new_chunks)
+        if LAST_DOC_TEXT:
+            buffer_text = f"{LAST_DOC_TEXT}\n\n{buffer_text}"
+        LAST_DOC_TEXT = buffer_text[-MAX_CONTEXT_CHARS:]
+
+    return jsonify({"ok": True, "chars": len(LAST_DOC_TEXT)})
+
+
+@app.route("/api/context-chars", methods=["GET"])
+def get_context_chars():
+    """Return the number of characters currently stored in the context buffer."""
+    return jsonify({"chars": len(LAST_DOC_TEXT)})
+
+
+@app.route("/api/clear-context", methods=["POST"])
+def clear_context():
+    """Clear the in-memory context buffer."""
+    global LAST_DOC_TEXT
+    LAST_DOC_TEXT = ""
+    return jsonify({"ok": True})
 
 if __name__ == "__main__":
     app.run(debug=True)
