@@ -432,43 +432,46 @@
         currentLLMChoice = llmChoice;
         currentPrompt = value;
 
-        // Clear output and show a small spinner text
+        const provider = llmChoice || 'openai';
+        const payload = {
+          prompt: value,
+          provider,
+          apiKey: typeof window.getApiKey === 'function' ? window.getApiKey(provider) : '',
+          llm_choice: llmChoice
+        };
+
         setOutput('');
 
         try {
           const res = await fetch('/api/prompt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: value, llm_choice: llmChoice })
+            body: JSON.stringify(payload)
           });
 
-          // If API key missing, server returns JSON error; handle that first.
           const contentType = res.headers.get('content-type') || '';
-          if (!res.ok && contentType.includes('application/json')) {
-            const payload = await res.json();
-            if (payload && payload.error === 'NO API key set.') {
-              showApiKeyModal(llmChoice);
+          const isJson = contentType.includes('application/json');
+          const body = isJson ? await res.json() : await res.text();
+
+          if (!res.ok) {
+            const errorMessage = isJson ? (body?.error || '') : '';
+            const missingKeyError = typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('api key');
+            if (missingKeyError && typeof window.showApiKeyModal === 'function') {
+              window.showApiKeyModal(provider);
               return;
             }
-            throw new Error(payload?.error || 'Request failed');
+            throw new Error(errorMessage || 'Request failed');
           }
 
-          // Stream plain text chunks and append to the output box
-          const reader = res.body?.getReader();
-          const decoder = new TextDecoder();
-          if (!reader) {
-            throw new Error('Streaming not supported by this browser.');
-          }
-
-          while (true) {
-            const { done, value: chunk } = await reader.read();
-            if (done) break;
-            const text = decoder.decode(chunk, { stream: true });
-            if (text) appendOutput(text);
+          if (isJson) {
+            const output = typeof body.output === 'string' ? body.output : '';
+            setOutput(output || '[No output returned]');
+          } else {
+            setOutput(typeof body === 'string' ? body : '[No output returned]');
           }
         } catch (err) {
-          console.error('Error streaming prompt:', err);
-          appendOutput('\\n[Error] ' + (err?.message || String(err)));
+          console.error('Error submitting prompt:', err);
+          setOutput('[Error] ' + (err?.message || String(err)));
         }
       }
       
@@ -491,20 +494,32 @@
       const apiKeyInput = document.getElementById('api-key-input');
 
       if (cancelButton) {
-        cancelButton.addEventListener('click', hideApiKeyModal);
+        cancelButton.addEventListener('click', function () {
+          if (typeof window.hideApiKeyModal === 'function') {
+            window.hideApiKeyModal();
+          }
+        });
       }
 
       if (submitButton) {
-        submitButton.addEventListener('click', submitApiKey);
+        submitButton.addEventListener('click', function () {
+          if (typeof window.submitApiKey === 'function') {
+            window.submitApiKey();
+          }
+        });
       }
 
       if (apiKeyInput) {
         apiKeyInput.addEventListener('keydown', function (e) {
           if (e.key === 'Enter') {
             e.preventDefault();
-            submitApiKey();
+            if (typeof window.submitApiKey === 'function') {
+              window.submitApiKey();
+            }
           } else if (e.key === 'Escape') {
-            hideApiKeyModal();
+            if (typeof window.hideApiKeyModal === 'function') {
+              window.hideApiKeyModal();
+            }
           }
         });
       }
@@ -547,5 +562,6 @@
       }
     })();
   </script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
