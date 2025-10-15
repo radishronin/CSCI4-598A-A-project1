@@ -1,72 +1,18 @@
 """ A Flask application for LLM interaction. """
-import io
 import os
-import re
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
-from pypdf import PdfReader
-from docx import Document
-from pptx import Presentation
-from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
 ''' Constants '''
 GEMINI_MODEL = "gemini-2.0-flash"
 OPENAI_MODEL = "gpt-4o-mini"
-MAX_CONTEXT_CHARS = 20_000
-
-LAST_DOC_TEXT = ""
-
-
-def extract_text(name: str, data: bytes) -> str:
-    """Extract plain text from supported document formats."""
-    ext = os.path.splitext(name or "")[1].lower()
-    text_chunks: list[str] = []
-
-    try:
-        if ext == ".pdf":
-            reader = PdfReader(io.BytesIO(data))
-            for page in reader.pages:
-                try:
-                    page_text = page.extract_text() or ""
-                except Exception:
-                    page_text = ""
-                if page_text:
-                    text_chunks.append(page_text)
-        elif ext == ".docx":
-            document = Document(io.BytesIO(data))
-            text_chunks.extend(paragraph.text for paragraph in document.paragraphs if paragraph.text)
-        elif ext == ".pptx":
-            presentation = Presentation(io.BytesIO(data))
-            for slide in presentation.slides:
-                for shape in slide.shapes:
-                    text = getattr(shape, "text", "")
-                    if text:
-                        text_chunks.append(text)
-        elif ext in {".html", ".htm"}:
-            soup = BeautifulSoup(data, "lxml")
-            text = soup.get_text(separator=" ")
-            if text:
-                text_chunks.append(text)
-        elif ext in {".txt", ".md"}:
-            text = data.decode("utf-8", "ignore")
-            if text:
-                text_chunks.append(text)
-        else:
-            text = data.decode("utf-8", "ignore")
-            if text:
-                text_chunks.append(text)
-    except Exception:
-        return ""
-
-    normalized = re.sub(r"\s+", " ", " ".join(text_chunks)).strip()
-    return normalized
 
 def get_environment_api_key(llm_choice: str) -> str:
     """Get the API key for the selected LLM from ./api_keys/{llm_choice}"""
@@ -126,65 +72,51 @@ def receive_prompt():
     2. Create Langchain agent, return response 
     """
     data = request.get_json(silent=True) or {}
+    prompt_text = data.get("prompt", "")
+    llm_choice = data.get("llm_choice", "")
 
-    prompt_text = (data.get("prompt") or "").strip()
-    if not prompt_text:
-        return jsonify({"error": "missing fields: prompt"}), 400
+    if llm_choice == "":
+        return jsonify({"ok": False, "error": "SNO: no LLM selected."}), 400
 
-    provider = (data.get("provider") or data.get("llm_choice") or "openai").strip().lower() or "openai"
+    api_key: str = get_environment_api_key(llm_choice)
+    if api_key == "":
+        return jsonify({"ok": False, "error": "NO API key set."}), 400
 
-    if provider not in {"openai", "gemini"}:
-        return jsonify({"error": f"unsupported provider: {provider}"}), 400
-
-    request_api_key = data.get("apiKey") or data.get("api_key") or ""
-    stored_api_key = get_environment_api_key(provider)
-
-    global LAST_DOC_TEXT
-    prompt_with_context = prompt_text
-    if LAST_DOC_TEXT:
-        prompt_with_context = (
-            "Use the following context to answer. If irrelevant, say so briefly.\n"
-            f"{LAST_DOC_TEXT}\n\nQuestion: {prompt_text}"
+    if llm_choice == "gemini":
+        langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL,
+            google_api_key=api_key
         )
-
-    if provider == "openai":
-        api_key = os.getenv("OPENAI_API_KEY") or stored_api_key or request_api_key
+    elif llm_choice == "openai":
+        langchain_llm: BaseChatModel = ChatOpenAI(
+            model=OPENAI_MODEL,
+            api_key=api_key
+        )
     else:
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or stored_api_key or request_api_key
+        return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
 
-    if not api_key:
-        return jsonify({"error": f"missing API key for provider: {provider}"}), 400
+    langchain_agent: CompiledStateGraph = create_react_agent(
+        model=langchain_llm,
+        tools=[]
+    )
 
-    try:
-        if provider == "gemini":
-            langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
-                model=GEMINI_MODEL,
-                google_api_key=api_key
-            )
-        else:
-            langchain_llm = ChatOpenAI(
-                model=OPENAI_MODEL,
-                api_key=api_key
-            )
+    @stream_with_context
+    def generate():
+        # Optional: small preamble so client can clear UI
+        yield ""
 
-        langchain_agent: CompiledStateGraph = create_react_agent(
-            model=langchain_llm,
-            tools=[]
-        )
-
-        output_chunks: list[str] = []
-        for step in langchain_agent.stream({"messages": [prompt_with_context]}, stream_mode="values"):
+        for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
             msg = step["messages"][-1]
+
+            # Only yield if the message is from the AI (not Human)
             if isinstance(msg, AIMessage):
                 text = _message_to_text(msg)
                 if text:
-                    output_chunks.append(text)
+                    yield text
+        # Optionally end with a newline
+        yield "\n"
 
-        output_text = "".join(output_chunks).strip()
-    except Exception as exc:  # pragma: no cover - best effort error handling
-        return jsonify({"error": str(exc), "provider": provider}), 500
-
-    return jsonify({"output": output_text, "provider": provider})
+    return Response(generate(), mimetype="text/plain")
 
 @app.route("/api/set-api-key", methods=["POST"])
 def set_api_key():
@@ -207,48 +139,18 @@ def set_api_key():
 
 @app.route("/api/upload-files", methods=["POST"])
 def upload_files():
-    """Handle multipart file uploads and load text into the context buffer."""
-    file_objects = list(request.files.getlist("files"))
-    alt_files = request.files.getlist("files[]")
-    if alt_files:
-        file_objects.extend(alt_files)
+    """ Handle file uploads and print file information """
+    data = request.get_json(silent=True) or {}
+    files = data.get("file_paths", [])
+    print(f"[FILE_UPLOAD] Received {len(files)} file(s)")
 
-    if not file_objects:
-        return jsonify({"error": "no files provided"}), 400
-
-    global LAST_DOC_TEXT
-    new_chunks: list[str] = []
-
-    for storage in file_objects:
-        try:
-            file_bytes = storage.read() or b""
-        except Exception:
-            file_bytes = b""
-        text = extract_text(storage.filename or "", file_bytes)
-        if text:
-            new_chunks.append(text)
-
-    if new_chunks:
-        buffer_text = "\n\n".join(new_chunks)
-        if LAST_DOC_TEXT:
-            buffer_text = f"{LAST_DOC_TEXT}\n\n{buffer_text}"
-        LAST_DOC_TEXT = buffer_text[-MAX_CONTEXT_CHARS:]
-
-    return jsonify({"ok": True, "chars": len(LAST_DOC_TEXT)})
-
-
-@app.route("/api/context-chars", methods=["GET"])
-def get_context_chars():
-    """Return the number of characters currently stored in the context buffer."""
-    return jsonify({"chars": len(LAST_DOC_TEXT)})
-
-
-@app.route("/api/clear-context", methods=["POST"])
-def clear_context():
-    """Clear the in-memory context buffer."""
-    global LAST_DOC_TEXT
-    LAST_DOC_TEXT = ""
-    return jsonify({"ok": True})
+    # For now, just print out files. Future: add to RAG architecture.
+    for i, file_info in enumerate(files, 1):
+        print(f"[FILE_UPLOAD] File {i}: {file_info.get('name', 'Unknown')} "
+              f"(Size: {file_info.get('size', 0)} bytes, "
+              f"Type: {file_info.get('type', 'Unknown')})")
+    
+    return jsonify({"ok": True, "message": f"Received {len(files)} file(s)"})
 
 if __name__ == "__main__":
     app.run(debug=True)
