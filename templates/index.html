@@ -585,17 +585,30 @@
         }
 
         const filePaths = [];
+        const fileReadPromises = [];
+
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          // Note: In a real browser environment, we can't get absolute paths for security reasons
-          // This is a limitation of the File API. We'll send the file name and size instead.
-          filePaths.push({
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            lastModified: file.lastModified
+          const reader = new FileReader();
+          const readPromise = new Promise((resolve, reject) => {
+            reader.onload = function(e) {
+              filePaths.push({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                lastModified: file.lastModified,
+                content: e.target.result.split(',')[1] // Base64-encoded content, split header
+              });
+              resolve();
+            };
+            reader.onerror = function(e) {
+              reject(e);
+            };
+            reader.readAsDataURL(file);
           });
+          fileReadPromises.push(readPromise);
         }
+        await Promise.all(fileReadPromises);
 
         try {
           const response = await fetch('/api/upload-files', {
