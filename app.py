@@ -5,7 +5,6 @@ import base64
 from io import BytesIO
 from pypdf import PdfReader
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
-from langchain.tools import Tool
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from langchain_core.language_models import BaseChatModel
@@ -13,13 +12,13 @@ from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from llama_index.core import Document, VectorStoreIndex
+from llama_index.core.langchain_helpers.agents import IndexToolConfig, LlamaIndexTool
 from llama_index.core import StorageContext, Settings, load_index_from_storage
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.vector_stores.simple import SimpleVectorStore
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
-import socket
 
 app = Flask(__name__)
 
@@ -28,7 +27,8 @@ app = Flask(__name__)
 GEMINI_MODEL = "gemini-2.0-flash"
 OPENAI_MODEL = "gpt-4o-mini"
 INDEX_PATH = "./rag_documents"
-is_first_run = 1
+is_first_llm_run = 1
+is_first_embed_run = 1
 
 def initialize_llm(llm_choice : str) -> None:
     """ Initialize LLM in LlamaIndex friendly way. """
@@ -45,7 +45,6 @@ def initialize_llm(llm_choice : str) -> None:
 
         try:
             # Use LlamaIndex wrapper
-            print("Constructing")
             llm = GoogleGenAI(
                 model=GEMINI_MODEL,
                 api_key=api_key
@@ -61,8 +60,6 @@ def initialize_llm(llm_choice : str) -> None:
         pass
     else:
         pass
-
-    return llm
 
 def initialize_embedding_model(llm_choice : str):
     """ Initialize embedding model for RAG. """
@@ -97,8 +94,6 @@ def initialize_embedding_model(llm_choice : str):
 
     else:
         pass
-    
-    return embedding_model
 
 def get_vector_index(llm_choice: str):
     """
@@ -107,10 +102,6 @@ def get_vector_index(llm_choice: str):
     Returns the VectorStoreIndex, or None on failure.
     """
     try:
-        # Ensure embed model is initialized (also sets Settings.embed_model)
-        embed_model = initialize_embedding_model(llm_choice)
-        if embed_model is None:
-            return None
 
         index_dir = os.path.join(INDEX_PATH, llm_choice)
         if not Path(index_dir).exists():
@@ -119,7 +110,7 @@ def get_vector_index(llm_choice: str):
             storage_context = StorageContext.from_defaults(vector_store=vector_store)
             vector_index = VectorStoreIndex(
                 nodes=[],
-                embed_model=embed_model,
+                embed_model=Settings.embed_model,
                 use_async=False,
                 store_nodes_override=False,
                 insert_batch_size=2048,
@@ -132,7 +123,7 @@ def get_vector_index(llm_choice: str):
             storage_context = StorageContext.from_defaults(persist_dir=index_dir)
             vector_index = load_index_from_storage(
                 storage_context,
-                embed_model=embed_model,
+                embed_model=Settings.embed_model,
                 use_async=False,
                 store_nodes_override=False,
                 insert_batch_size=2048,
@@ -224,13 +215,18 @@ def receive_prompt():
     else:
         return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
     
-    global is_first_run
-    if is_first_run == 1:
+    global is_first_llm_run
+    if is_first_llm_run == 1:
         print("Initializing LLM")
         initialize_llm(llm_choice)
-        is_first_run = 0
+        is_first_llm_run = 0
+    
+    global is_first_embed_run
+    if is_first_embed_run == 1:
+        print("Initializing embedding model")
+        initialize_embedding_model(llm_choice)
+        is_first_embed_run = 0
 
-    '''
     # Obtain VectorStoreIndex for this llm_choice (for file ingestion/RAG)
     vector_index = get_vector_index(llm_choice)
     if vector_index is None:
@@ -243,26 +239,20 @@ def receive_prompt():
 
     print("Query engine made")
 
-    def rag_search(input_query: str) -> str:
-        result = query_engine.query(input_query)
-        try:
-            return result.response if hasattr(result, "response") else str(result)
-        except Exception:
-            return str(result)
-
-    query_tool = Tool(
-        name=f"{llm_choice.title()} RAG Search",
-        func=rag_search,
+    query_tool_config = IndexToolConfig(
+        query_engine = query_engine,
+        name = "CustomizedQueryingTool",
         description=f"Performs retrieval-augmented generation from {llm_choice} vector store.",
     )
+
+    query_engine_tool = LlamaIndexTool.from_tool_config(query_tool_config)
     print("Tool made")
 
-    tools = [query_tool]
-    '''
+    tools = [query_engine_tool]
 
     langchain_agent: CompiledStateGraph = create_react_agent(
         model=langchain_llm,
-        tools=[]
+        tools=tools
     )
 
     print("Agent made")
@@ -280,7 +270,7 @@ def receive_prompt():
                 text = _message_to_text(msg)
                 if text:
                     yield text
-                    
+
         # Optionally end with a newline
         yield "\n"
 
@@ -315,6 +305,12 @@ def upload_files():
     api_key: str = get_environment_api_key(llm_choice)
     if api_key == "":
         return jsonify({"ok": False, "error": "NO API key set."}), 400
+    
+    global is_first_embed_run
+    if is_first_embed_run == 1:
+        print("Initializing embedding model")
+        initialize_embedding_model(llm_choice)
+        is_first_embed_run = 0
 
     # Obtain VectorStoreIndex for this llm_choice (for file ingestion/RAG)
     vector_index = get_vector_index(llm_choice)
