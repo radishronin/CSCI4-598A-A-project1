@@ -25,6 +25,20 @@
     p.textContent += text;
   }
 
+  function showSpinner() {
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) {
+      spinner.style.display = 'flex';
+    }
+  }
+
+  function hideSpinner() {
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) {
+      spinner.style.display = 'none';
+    }
+  }
+
   async function submitPrompt() {
     const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
     const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
@@ -42,8 +56,9 @@
     currentLLMChoice = llmChoice;
     currentPrompt = value;
 
-    // Clear output and show a small spinner text
+    // Clear output and show spinner
     setOutput('');
+    showSpinner();
     
     try {
       const res = await fetch('/api/prompt', {
@@ -58,7 +73,9 @@
       if (!res.ok && contentType.includes('application/json')) {
         const payload = await res.json();
         if (payload && payload.error === 'NO API key set.') {
+          hideSpinner();
           showApiKeyModal(llmChoice);
+          document.getElementById('prompt-input').value = '';
           return;
         }
         throw new Error(payload?.error || 'Request failed');
@@ -71,13 +88,25 @@
         throw new Error('Streaming not supported by this browser.');
       }
 
+      // Hide spinner once streaming starts (first chunk received)
+      let firstChunk = true;
       while (true) {
         const { done, value: chunk } = await reader.read();
-        if (done) break;
+        if (done) {
+          hideSpinner();
+          break;
+        }
         const text = decoder.decode(chunk, { stream: true });
-        if (text) appendOutput(text);
+        if (text) {
+          if (firstChunk) {
+            hideSpinner();
+            firstChunk = false;
+          }
+          appendOutput(text);
+        }
       }
     } catch (err) {
+      hideSpinner();
       console.error('Error streaming prompt:', err);
       appendOutput('\\n[Error] ' + (err?.message || String(err)));
     }
@@ -190,6 +219,9 @@
       return;
     }
 
+    // Show spinner when file upload starts
+    showSpinner();
+
     const filePaths = [];
     const fileReadPromises = [];
 
@@ -224,10 +256,12 @@
       });
       
       const result = await response.json();
+      hideSpinner();
       alert('File upload successful');
       fileInput.value = '';
     } catch (err) {
-      alert('Error uploading files:', err);
+      hideSpinner();
+      alert('Error uploading files: ' + (err?.message || String(err)));
     }
   }
 })();

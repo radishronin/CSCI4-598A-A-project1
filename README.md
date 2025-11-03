@@ -59,6 +59,7 @@ This project includes a Dockerfile for containerized deployment, ensuring consis
 ### Building the Docker Image
 
 Build the Docker image from the project root directory:
+NOTE: Be sure that all directories specified in the Dockerfile exist before building (even if empty)!
 
 ```bash
 docker build -t llm-app .

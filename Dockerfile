@@ -28,10 +28,10 @@ COPY static/ ./static/
 
 # Copy API keys and RAG documents directories
 # These will be included in the image so they persist across container instances
-# Note: Ensure directories exist first, then copy their contents
-RUN mkdir -p api_keys rag_documents
+RUN mkdir -p api_keys/ rag_documents/
 COPY api_keys/ ./api_keys/
 COPY rag_documents/ ./rag_documents/
+
 
 # Expose Flask default port
 EXPOSE 5000

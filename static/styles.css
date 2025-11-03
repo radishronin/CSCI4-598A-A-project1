@@ -495,3 +495,50 @@ button:focus-visible {
   }
 }
 
+/* Fullscreen Loading Spinner Styles */
+.loading-spinner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  margin: 0;
+  padding: 0;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(52, 152, 219, 0.2);
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 2rem;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-style: normal;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Show spinner when visible */
+.loading-spinner[style*="display: block"],
+.loading-spinner[style*="display: flex"],
+.loading-spinner:not([style*="display: none"]) {
+  display: flex !important;
+}
+
