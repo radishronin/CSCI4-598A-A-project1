@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home - LLM Study Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="container" role="main">
+    <header>
+      <h1>Welcome to LLM Study Assistant</h1>
+      <p class="intro">
+        Struggling to keep up with your coursework? This tool helps students tackle heavy workloads and fast-paced schedules by providing instant, focused study support. No more wasting time searching for resources—just ask, upload your materials, and get clear, actionable answers. Unlock the power of shared knowledge and study smarter, not harder.
+      </p>
+    </header>
+
+    <section class="row homepage-content">
+      <div class="homepage-features">
+        <h2>Get Started</h2>
+        <p>
+          Click the button below to access the LLM interface where you can:
+        </p>
+        <ul class="feature-list">
+          <li>Ask questions and get instant answers</li>
+          <li>Upload study materials for context-aware responses</li>
+          <li>Choose from multiple LLM providers (Gemini, OpenAI)</li>
+          <li>Get responses in your preferred language</li>
+        </ul>
+      </div>
+
+      <div class="actions homepage-actions">
+        <a href="{{ url_for('index') }}" class="btn-primary">
+          <button id="enter-app-button" type="button" aria-label="Enter Application">
+            Get Started
+          </button>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add all JS functions here -->
+  <script src="{{ url_for('static', filename='homepage.js') }}"></script>
+</body>
+</html>
+
