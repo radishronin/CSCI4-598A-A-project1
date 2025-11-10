@@ -88,10 +88,7 @@ docker run -p 5000:5000 \
   llm-app
 ```
 
-**Note:** On Windows PowerShell, use:
-```powershell
-docker run -p 5000:5000 -v ${PWD}/api_keys:/app/api_keys -v ${PWD}/rag_documents:/app/rag_documents llm-app
-```
+**Note:** On Windows PowerShell, use the provided script.
 
 ### Container Management
 

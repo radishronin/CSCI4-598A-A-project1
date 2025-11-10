@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 import base64
 from io import BytesIO
-from pypdf import PdfReader
+import pdfplumber
+import pandas as pd
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
@@ -102,7 +103,6 @@ def get_vector_index(llm_choice: str):
     Returns the VectorStoreIndex, or None on failure.
     """
     try:
-
         index_dir = os.path.join(INDEX_PATH, llm_choice)
         if not Path(index_dir).exists():
             # Fresh index
@@ -157,6 +157,11 @@ def set_environment_api_key(llm_choice: str, api_key: str):
         f.write(api_key.strip())
 
 @app.route("/")
+def homepage():
+    """ Render the homepage.html template """
+    return render_template("homepage.html")
+
+@app.route("/index")
 def index():
     """ Render the index.html template """
     return render_template("index.html")
@@ -305,7 +310,7 @@ def upload_files():
     api_key: str = get_environment_api_key(llm_choice)
     if api_key == "":
         return jsonify({"ok": False, "error": "NO API key set."}), 400
-    
+
     global is_first_embed_run
     if is_first_embed_run == 1:
         print("Initializing embedding model")
@@ -320,20 +325,30 @@ def upload_files():
     # Add to RAG index as PDFs are parsed
     any_inserted = False
     splitter = SentenceSplitter(chunk_size=1200, chunk_overlap=200)
+
     for file_info in files:
         content_b64 = file_info.get('content', '')
         file_name = file_info.get('name', '')
         file_type = file_info.get('type', '')
         extracted_text = ""
 
-        if content_b64 and file_type == "application/pdf":
+        if not content_b64:
+            print(f"[FILE_UPLOAD] No content found for {file_name}")
+            continue
+        
+        if file_type == "application/pdf":
             try:
-                pdf_bytes = base64.b64decode(content_b64)
-                pdf_stream = BytesIO(pdf_bytes)
-                reader = PdfReader(pdf_stream)
-                for page in reader.pages:
-                    extracted_text += page.extract_text() or ""
-                
+                with pdfplumber.open(BytesIO(base64.b64decode(content_b64))) as pdf:
+                    for page in pdf.pages:
+                        text = page.extract_text() or ""
+                        tables = page.extract_tables()
+                        # Convert tables to text descriptions
+                        for table in tables:
+                            df = pd.DataFrame(table[1:], columns=table[0])
+                            text += f"\n\nTable:\n{df.to_string()}\n"
+                            extracted_text += text
+                            text = ""
+
                 if extracted_text.strip():
                     doc = Document(text=extracted_text, metadata={"file_name": file_name, "file_type": file_type})
                     nodes = splitter.get_nodes_from_documents([doc])
@@ -345,13 +360,23 @@ def upload_files():
             except Exception as e:
                 print(f"[FILE_UPLOAD] Error extracting text from {file_name}: {e}")
         
+        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            pass
+
         else:
             print(f"[FILE_UPLOAD] Unsupported file type or empty content: name={file_name}, type={file_type}")
 
     # Persist once after all inserts (persist to per-LLM directory)
     if any_inserted:
+        print("Persisting index")
         index_dir = os.path.join(INDEX_PATH, llm_choice)
-        vector_index.storage_context.persist(index_dir)
+        
+        # Make sure index directory exists
+        if not os.path.exists(index_dir):
+            print("Here")
+            os.makedirs(index_dir, exist_ok=True)
+        
+        vector_index.storage_context.persist(Path(index_dir))
     
     return jsonify({"ok": True, "message": f"Received {len(files)} file(s)"})
 
