@@ -2,9 +2,11 @@
 import os
 from pathlib import Path
 import base64
+from PIL import Image
 from io import BytesIO
 import pdfplumber
 import pandas as pd
+import numpy as np
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
@@ -13,6 +15,7 @@ from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from llama_index.core import Document, VectorStoreIndex
+from llama_index.core.schema import ImageDocument
 from llama_index.core.langchain_helpers.agents import IndexToolConfig, LlamaIndexTool
 from llama_index.core import StorageContext, Settings, load_index_from_storage
 from llama_index.core.node_parser import SentenceSplitter
@@ -339,11 +342,34 @@ def upload_files():
         if file_type == "application/pdf":
             try:
                 with pdfplumber.open(BytesIO(base64.b64decode(content_b64))) as pdf:
-                    for page in pdf.pages:
+                    for page_number, page in enumerate(pdf.pages, 1):
                         text = page.extract_text() or ""
-                        tables = page.extract_tables()
+                        extracted_text += f"\n\n--- Page {page_number} ---\n{text}\n"
+                        
+                        # Extract the images from the PDF
+                        for image_index, image in enumerate(page.images):
+                            try:
+                                print(f"[FILE_UPLOAD] Image: {image}")
+                                image_bounding_box = (image["x0"], page.height - image["y1"], image["x1"], page.height - image["y0"])
+                                cropped_image = page.crop(image_bounding_box).to_image(resolution=300)
+                                print(type(cropped_image))
+                                image_document = ImageDocument(
+                                    image = Image.fromarray(np.array(cropped_image.original)),
+                                    metadata={
+                                        "file_name": file_name,
+                                        "page_num": page_number,
+                                        "image_idx": image_index,
+                                        "source_pdf": file_name
+                                    }
+                                )
+                                # TODO: add image to RAG database
+
+                            except Exception as img_error:
+                                print(f"[IMAGE UPLOAD] Error with image detection: {img_error}. Continuing.")
+                                continue
+
                         # Convert tables to text descriptions
-                        for table in tables:
+                        for table in page.extract_tables():
                             df = pd.DataFrame(table[1:], columns=table[0])
                             text += f"\n\nTable:\n{df.to_string()}\n"
                             extracted_text += text
