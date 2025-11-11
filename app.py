@@ -202,6 +202,8 @@ def receive_prompt():
     data = request.get_json(silent=True) or {}
     prompt_text = data.get("prompt", "")
     llm_choice = data.get("llm_choice", "")
+    # Accept either 'target_language' or 'language' from the frontend
+    target_language = data.get("target_language", "") or data.get("language", "")
 
     if llm_choice == "":
         return jsonify({"ok": False, "error": "SNO: no LLM selected."}), 400
@@ -264,6 +266,21 @@ def receive_prompt():
     )
 
     print("Agent made")
+    # If a target language is requested, prepend a clear instruction so the LLM
+    # produces output in that language. Use a small mapping for friendly names.
+    if target_language:
+        language_map = {
+            "en": "English",
+            "es": "Spanish",
+            "fr": "French",
+            "de": "German",
+            "zh": "Chinese",
+            "hi": "Hindi"
+        }
+        lang_name = language_map.get(target_language, target_language)
+        # Strong instruction ensures the agent replies in the requested language.
+        prompt_text = f"Please respond ONLY in {lang_name}. " \
+                      f"All output should be in {lang_name}.\n\nUser prompt:\n{prompt_text}"
 
     @stream_with_context
     def generate():

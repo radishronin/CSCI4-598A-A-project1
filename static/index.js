@@ -41,7 +41,8 @@
 
   async function submitPrompt() {
     const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
-    const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
+  const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
+  const targetLanguage = document.getElementById('language-select')?.value || 'en';
 
     if (!llmChoice) {
       alert('Please select an LLM.');
@@ -64,7 +65,7 @@
       const res = await fetch('/api/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: value, llm_choice: llmChoice })
+        body: JSON.stringify({ prompt: value, llm_choice: llmChoice, target_language: targetLanguage })
       });
 
       // If API key missing, server returns JSON error; handle that first.
