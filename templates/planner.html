@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Path Planner</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="container planner-container" role="main">
+    <header class="planner-header">
+      <div class="planner-title-group">
+        <h1>Campus Path Planner</h1>
+        <p class="planner-intro">
+          Sketch out your efficient class route. Add your course IDs below and preview where your optimized
+          campus journey will appear once the feature is ready.
+        </p>
+      </div>
+      <a class="btn secondary" href="{{ url_for('index') }}">Back to RAG Assistant</a>
+    </header>
+
+    <section class="planner-grid" aria-labelledby="planner-map-label">
+      <div class="planner-map" role="img" aria-labelledby="planner-map-label planner-map-caption">
+        <p id="planner-map-label" class="planner-section-label">Map Preview</p>
+        <div class="map-placeholder">
+          <span>Campus map overlay coming soon</span>
+        </div>
+        <p id="planner-map-caption" class="planner-caption">This area will display the campus map with your optimized path.</p>
+      </div>
+      <form class="planner-form" aria-labelledby="planner-input-label">
+        <label id="planner-input-label" for="planner-class-input">Class List</label>
+        <textarea id="planner-class-input" name="class-list" placeholder="Enter class IDs, one per line..."></textarea>
+        <button type="button" class="btn" disabled aria-disabled="true">Generate Path (coming soon)</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
