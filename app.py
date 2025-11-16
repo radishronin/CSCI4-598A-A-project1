@@ -169,6 +169,12 @@ def index():
     """ Render the index.html template """
     return render_template("index.html")
 
+
+@app.route("/planner")
+def planner():
+    """ Render the planner.html template """
+    return render_template("planner.html")
+
 def _message_to_text(msg) -> str:
     """Extract plain text from message content which can be a str or list of parts."""
     try:
