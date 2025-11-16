@@ -83,6 +83,9 @@ input[type="file"] {
 }
 
 button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px 30px;
   border: none;
   border-radius: 50px;
