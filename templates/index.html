@@ -34,10 +34,41 @@
         <option value="es">Spanish</option>
         <option value="fr">French</option>
         <option value="de">German</option>
-        <option value="zh">Chinese</option>
+        <option value="zh">Chinese (Mandarin)</option>
         <option value="hi">Hindi</option>
-        <!-- Add more languages as needed -->
+        <option value="ar">Arabic</option>
+        <option value="pt">Portuguese</option>
+        <option value="ru">Russian</option>
+        <option value="it">Italian</option>
+        <option value="ja">Japanese</option>
+        <option value="ko">Korean</option>
+        <option value="tr">Turkish</option>
+        <option value="nl">Dutch</option>
+        <option value="sv">Swedish</option>
+        <option value="pl">Polish</option>
+        <option value="vi">Vietnamese</option>
+        <option value="th">Thai</option>
+        <option value="id">Indonesian</option>
+        <option value="bn">Bengali</option>
+        <option value="ur">Urdu</option>
+        <option value="fa">Persian (Farsi)</option>
+        <option value="he">Hebrew</option>
+        <option value="ro">Romanian</option>
+        <option value="cs">Czech</option>
+        <option value="el">Greek</option>
+        <option value="hu">Hungarian</option>
+        <option value="no">Norwegian</option>
+        <option value="sk">Slovak</option>
       </select>
+    </section>
+
+    <section class="row" aria-labelledby="mode-label">
+      <label id="mode-label" for="mode-select">Response mode</label>
+      <select id="mode-select" name="mode">
+        <option value="direct">Direct — respond only in the selected language</option>
+        <option value="both">Original + Translation — include original response and then a translated version</option>
+      </select>
+      <p class="help">"Original + Translation" is useful when you want to see the primary answer and a translated version separated clearly.</p>
     </section>
 
     <section class="row" aria-labelledby="llm-label">
