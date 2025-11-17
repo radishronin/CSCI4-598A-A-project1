@@ -211,6 +211,9 @@ def receive_prompt():
     # Accept either 'target_language' or 'language' from the frontend
     target_language = data.get("target_language", "") or data.get("language", "")
 
+    if not target_language:
+        target_language = "en"
+
     if llm_choice == "":
         return jsonify({"ok": False, "error": "SNO: no LLM selected."}), 400
 
@@ -368,7 +371,49 @@ def upload_files():
                     for page_number, page in enumerate(pdf.pages, 1):
                         text = page.extract_text() or ""
                         extracted_text += f"\n\n--- Page {page_number} ---\n{text}\n"
-                        
+                        '''
+                        We tried to add images to our RAG encoder, but there wasn't any success.
+                        See below for what we were able to get.
+                        Issues were either needing to pay for something or
+                        not having the necessary APIs without restarting the build from
+                        scratch. The library didn't have the functionality we
+                        were looking for and we didn't want to restart everything, so yeah :(
+                        # Extract the images from the PDF
+                        for image_idx, image in enumerate(page.images):
+                            try:
+                                print(f"[FILE_UPLOAD] Image: {image}")
+                                image_bounding_box = (image["x0"], page.height - image["y1"], image["x1"], page.height - image["y0"])
+                                cropped_image = page.crop(image_bounding_box).to_image(resolution=300)
+                               
+                                # Convert cropped_image to bytes and then to base64
+                                cropped_bytes = BytesIO()
+                                cropped_image.save(cropped_bytes, format="PNG")
+                                cropped_bytes.seek(0)
+                                cropped_base64 = base64.b64encode(cropped_bytes.read()).decode("utf-8")
+                               
+                                # Create ImageDocument for multimodal RAG
+                                image_document = ImageDocument(
+                                    image=cropped_base64,
+                                    image_mimetype="image/png",
+                                    metadata={
+                                        "file_name": file_name,
+                                        "page_num": page_number,
+                                        "image_idx": image_idx,
+                                        "source_pdf": file_name,
+                                        "file_type": file_type
+                                    }
+                                )
+                               
+                                # Insert image document into vector index
+                                print(f"[RAG] Inserting image document from {file_name}, page {page_number}, image {image_idx}...")
+                                vector_index.insert_nodes([image_document])
+                                any_inserted = True
+
+
+                            except Exception as img_error:
+                                print(f"[IMAGE UPLOAD] Error with image detection: {img_error}. Continuing.")
+                                continue
+
                         # Extract the images from the PDF
                         for image_index, image in enumerate(page.images):
                             try:
@@ -387,9 +432,11 @@ def upload_files():
                                 )
                                 # TODO: add image to RAG database
 
+
                             except Exception as img_error:
                                 print(f"[IMAGE UPLOAD] Error with image detection: {img_error}. Continuing.")
                                 continue
+                        '''
 
                         # Convert tables to text descriptions
                         for table in page.extract_tables():
