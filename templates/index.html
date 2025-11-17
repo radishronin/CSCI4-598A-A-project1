@@ -62,6 +62,15 @@
       </select>
     </section>
 
+    <section class="row" aria-labelledby="mode-label">
+      <label id="mode-label" for="mode-select">Response mode</label>
+      <select id="mode-select" name="mode">
+        <option value="direct">Direct — respond only in the selected language</option>
+        <option value="both">Original + Translation — include original response and then a translated version</option>
+      </select>
+      <p class="help">"Original + Translation" is useful when you want to see the primary answer and a translated version separated clearly.</p>
+    </section>
+
     <section class="row" aria-labelledby="llm-label">
       <label id="llm-label">Select LLM</label>
       <div class="llm-options">
