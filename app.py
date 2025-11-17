@@ -214,130 +214,141 @@ def receive_prompt():
     if api_key == "":
         return jsonify({"ok": False, "error": "NO API key set."}), 400
 
-    if llm_choice == "gemini":
-        langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
-            model=GEMINI_MODEL,
-            google_api_key=api_key
-        )
-    elif llm_choice == "openai":
-        langchain_llm: BaseChatModel = ChatOpenAI(
-            model=OPENAI_MODEL,
-            api_key=api_key
-        )
-    else:
-        return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
-    
-    global is_first_llm_run
-    if is_first_llm_run == 1:
-        print("Initializing LLM")
-        initialize_llm(llm_choice)
-        is_first_llm_run = 0
-    
-    global is_first_embed_run
-    if is_first_embed_run == 1:
-        print("Initializing embedding model")
-        initialize_embedding_model(llm_choice)
-        is_first_embed_run = 0
-
-    # Obtain VectorStoreIndex for this llm_choice (for file ingestion/RAG)
-    vector_index = get_vector_index(llm_choice)
-    if vector_index is None:
-        return jsonify({"ok": False, "error": "Unable to create or load index."}), 400
-    
-    print("Vector index made")
-
-    # Create a query engine and expose it as a text-returning tool
-    query_engine = vector_index.as_query_engine(similarity_top_k=5)
-
-    print("Query engine made")
-
-    query_tool_config = IndexToolConfig(
-        query_engine = query_engine,
-        name = "CustomizedQueryingTool",
-        description=f"Performs retrieval-augmented generation from {llm_choice} vector store.",
-    )
-
-    query_engine_tool = LlamaIndexTool.from_tool_config(query_tool_config)
-    print("Tool made")
-
-    tools = [query_engine_tool]
-
-    langchain_agent: CompiledStateGraph = create_react_agent(
-        model=langchain_llm,
-        tools=tools
-    )
-
-    print("Agent made")
-    # If a target language is requested, prepend a clear instruction so the LLM
-    # produces output in that language. Use a small mapping for friendly names.
-    if target_language:
-        language_map = {
-            "en": "English",
-            "es": "Spanish",
-            "fr": "French",
-            "de": "German",
-            "zh": "Chinese (Mandarin)",
-            "hi": "Hindi",
-            "ar": "Arabic",
-            "pt": "Portuguese",
-            "ru": "Russian",
-            "it": "Italian",
-            "ja": "Japanese",
-            "ko": "Korean",
-            "tr": "Turkish",
-            "nl": "Dutch",
-            "sv": "Swedish",
-            "pl": "Polish",
-            "vi": "Vietnamese",
-            "th": "Thai",
-            "id": "Indonesian",
-            "bn": "Bengali",
-            "ur": "Urdu",
-            "fa": "Persian",
-            "he": "Hebrew",
-            "ro": "Romanian",
-            "cs": "Czech",
-            "el": "Greek",
-            "hu": "Hungarian",
-            "no": "Norwegian",
-            "sk": "Slovak"
-        }
-        lang_name = language_map.get(target_language, target_language)
-        # Build instructions depending on response_mode
-        if response_mode == "both":
-            # Ask the agent to provide the primary answer, then a clear translated
-            # section. We include markers so the client/user can split them if needed.
-            prompt_text = (
-                f"Provide a complete answer to the user's question.\n\n"
-                f"After the full answer, insert a line that says '---TRANSLATION ({lang_name})---' "
-                f"and then provide a translation of the full answer into {lang_name}. "
-                f"Do not include any additional commentary.\n\nUser prompt:\n{prompt_text}"
+    # Wrap the handler in try/except to capture unexpected errors and print
+    # a stacktrace to the server logs for diagnosis rather than returning a
+    # generic 500 without information.
+    try:
+        if llm_choice == "gemini":
+            langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
+                model=GEMINI_MODEL,
+                google_api_key=api_key
+            )
+        elif llm_choice == "openai":
+            langchain_llm: BaseChatModel = ChatOpenAI(
+                model=OPENAI_MODEL,
+                api_key=api_key
             )
         else:
-            # Strong instruction ensures the agent replies only in the requested language.
-            prompt_text = (
-                f"Please respond ONLY in {lang_name}. All output should be in {lang_name}.\n\n"
-                f"User prompt:\n{prompt_text}"
-            )
+            return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
 
-    @stream_with_context
-    def generate():
-        # Optional: small preamble so client can clear UI
-        yield ""
+        global is_first_llm_run
+        if is_first_llm_run == 1:
+            print("Initializing LLM")
+            initialize_llm(llm_choice)
+            is_first_llm_run = 0
 
-        for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
-            msg = step["messages"][-1]
+        global is_first_embed_run
+        if is_first_embed_run == 1:
+            print("Initializing embedding model")
+            initialize_embedding_model(llm_choice)
+            is_first_embed_run = 0
 
-            # Only yield if the message is from the AI (not Human)
-            if isinstance(msg, AIMessage):
-                text = _message_to_text(msg)
-                if text:
-                    yield text
+        # Obtain VectorStoreIndex for this llm_choice (for file ingestion/RAG)
+        vector_index = get_vector_index(llm_choice)
+        if vector_index is None:
+            return jsonify({"ok": False, "error": "Unable to create or load index."}), 400
 
-        # Optionally end with a newline
-        yield "\n"
+        print("Vector index made")
 
-    return Response(generate(), mimetype="text/plain")
+        # Create a query engine and expose it as a text-returning tool
+        query_engine = vector_index.as_query_engine(similarity_top_k=5)
+
+        print("Query engine made")
+
+        query_tool_config = IndexToolConfig(
+            query_engine = query_engine,
+            name = "CustomizedQueryingTool",
+            description=f"Performs retrieval-augmented generation from {llm_choice} vector store.",
+        )
+
+        query_engine_tool = LlamaIndexTool.from_tool_config(query_tool_config)
+        print("Tool made")
+
+        tools = [query_engine_tool]
+
+        langchain_agent: CompiledStateGraph = create_react_agent(
+            model=langchain_llm,
+            tools=tools
+        )
+
+        print("Agent made")
+        # If a target language is requested, prepend a clear instruction so the LLM
+        # produces output in that language. Use a small mapping for friendly names.
+        if target_language:
+            language_map = {
+                "en": "English",
+                "es": "Spanish",
+                "fr": "French",
+                "de": "German",
+                "zh": "Chinese (Mandarin)",
+                "hi": "Hindi",
+                "ar": "Arabic",
+                "pt": "Portuguese",
+                "ru": "Russian",
+                "it": "Italian",
+                "ja": "Japanese",
+                "ko": "Korean",
+                "tr": "Turkish",
+                "nl": "Dutch",
+                "sv": "Swedish",
+                "pl": "Polish",
+                "vi": "Vietnamese",
+                "th": "Thai",
+                "id": "Indonesian",
+                "bn": "Bengali",
+                "ur": "Urdu",
+                "fa": "Persian",
+                "he": "Hebrew",
+                "ro": "Romanian",
+                "cs": "Czech",
+                "el": "Greek",
+                "hu": "Hungarian",
+                "no": "Norwegian",
+                "sk": "Slovak"
+            }
+            lang_name = language_map.get(target_language, target_language)
+            # Build instructions depending on response_mode
+            if response_mode == "both":
+                # Ask the agent to provide the primary answer, then a clear translated
+                # section. We include markers so the client/user can split them if needed.
+                prompt_text = (
+                    f"Provide a complete answer to the user's question.\n\n"
+                    f"After the full answer, insert a line that says '---TRANSLATION ({lang_name})---' "
+                    f"and then provide a translation of the full answer into {lang_name}. "
+                    f"Do not include any additional commentary.\n\nUser prompt:\n{prompt_text}"
+                )
+            else:
+                # Strong instruction ensures the agent replies only in the requested language.
+                prompt_text = (
+                    f"Please respond ONLY in {lang_name}. All output should be in {lang_name}.\n\n"
+                    f"User prompt:\n{prompt_text}"
+                )
+
+        @stream_with_context
+        def generate():
+            # Optional: small preamble so client can clear UI
+            yield ""
+
+            for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
+                msg = step["messages"][-1]
+
+                # Only yield if the message is from the AI (not Human)
+                if isinstance(msg, AIMessage):
+                    text = _message_to_text(msg)
+                    if text:
+                        yield text
+
+            # Optionally end with a newline
+            yield "\n"
+
+        # Normal return: stream generator
+        return Response(generate(), mimetype="text/plain")
+    except Exception as e:
+        # Print full traceback to server logs for debugging
+        import traceback
+        traceback.print_exc()
+        # Return JSON error so frontend can display a useful message
+        return jsonify({"ok": False, "error": "Internal server error.", "detail": str(e)}), 500
 
 @app.route("/api/set-api-key", methods=["POST"])
 def set_api_key():
