@@ -25,6 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY templates/ ./templates/
 COPY static/ ./static/
+COPY routes/ ./routes/
 
 # Copy API keys and RAG documents directories
 # These will be included in the image so they persist across container instances

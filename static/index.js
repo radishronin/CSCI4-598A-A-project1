@@ -41,8 +41,8 @@
 
   async function submitPrompt() {
     const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
-  const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
-  const targetLanguage = document.getElementById('language-select')?.value || 'en';
+    const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
+    const targetLanguage = document.getElementById('language-select')?.value || 'en';
 
     if (!llmChoice) {
       alert('Please select an LLM.');
@@ -62,7 +62,7 @@
     showSpinner();
     
     try {
-      const res = await fetch('/api/prompt', {
+      const res = await fetch('/rag/api/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: value, llm_choice: llmChoice, target_language: targetLanguage })
@@ -139,7 +139,7 @@
     }
     
     try {
-      const response = await fetch('/api/set-api-key', {
+      const response = await fetch('/rag/api/set-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -250,7 +250,7 @@
     await Promise.all(fileReadPromises);
 
     try {
-      const response = await fetch('/api/upload-files', {
+      const response = await fetch('/rag/api/upload-files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file_paths: filePaths, llmChoice : llmChoice })

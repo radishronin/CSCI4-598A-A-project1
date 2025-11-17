@@ -20,7 +20,7 @@ To set up the project locally, follow these steps:
      source venv/bin/activate
      ```
 
-3. **Install the required Python dependencies:**
+3. **Optional: Install the required Python dependencies:**
 
    ```bash
    pip install -r requirements.txt
@@ -48,7 +48,7 @@ Once the setup is complete, you can start the Flask application:
 
 ---
 
-## Docker Setup
+## Docker Setup (Recommended)
 
 This project includes a Dockerfile for containerized deployment, ensuring consistent behavior across different operating systems.
 
