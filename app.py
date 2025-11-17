@@ -47,6 +47,28 @@ except Exception:
     # Best-effort file logging; continue if it fails
     logger.warning("Could not create vibe_app.log (permission or path issue). Continuing without file logging.")
 
+    # ---------------------------------------------------------------------------
+    # Module overview
+    #
+    # This Flask application provides a small web UI and API to interact with
+    # different LLM backends (Gemini, OpenAI). It supports:
+    # - Setting API keys (persisted to ./api_keys/{llm_name})
+    # - Uploading files to be indexed for RAG (stored under ./rag_documents)
+    # - Sending prompts to an agent that uses the LLM + a LlamaIndex toolset
+    # - Optional "mock" mode to simulate streaming responses for testing
+    # - Language filtering/instruction wrapping so the model outputs in a
+    #   user-selected target language and supports a 'both' mode (original +
+    #   translated output) or 'direct' mode (only the target language)
+    #
+    # Logging and debugging:
+    # - Uses a module logger `logger` which writes to stdout and (optionally)
+    #   to `vibe_app.log` in the working directory.
+    # - A global error handler returns JSON with a traceback for easier debugging
+    #
+    # Note: avoid logging secrets (API keys) — we only log high-level request
+    # metadata and the selected llm_choice/target_language/response_mode.
+    # ---------------------------------------------------------------------------
+
 
 @app.before_request
 def _log_request_info():
@@ -85,6 +107,10 @@ def initialize_llm(llm_choice : str) -> None:
     """ Initialize LLM in LlamaIndex friendly way. """
     llm = None
 
+    # The initialize path prepares a LlamaIndex-compatible LLM object. This
+    # function currently supports 'gemini' (Google) and can be extended to
+    # other providers. It primarily ensures API keys are available and sets
+    # Settings.llm so downstream LlamaIndex components can access the model.
     if llm_choice == "gemini":
         api_key = get_environment_api_key(llm_choice)
         if not api_key:
@@ -108,8 +134,10 @@ def initialize_llm(llm_choice : str) -> None:
         Settings.llm = llm
     
     elif llm_choice == "openai":
+        # Placeholder: OpenAI initialization can be added here if needed.
         pass
     else:
+        # Unknown provider: do nothing. Caller will handle missing LLM.
         pass
 
 def initialize_embedding_model(llm_choice : str):
@@ -144,6 +172,10 @@ def initialize_embedding_model(llm_choice : str):
         Settings.embed_model = embedding_model
 
     else:
+        # If no known embedding model is configured for the requested LLM,
+        # leave `Settings.embed_model` unchanged. Downstream code should
+        # validate that `Settings.embed_model` is set before attempting
+        # to create or load vector indexes.
         pass
 
 def get_vector_index(llm_choice: str):
@@ -181,7 +213,10 @@ def get_vector_index(llm_choice: str):
             )
 
         return vector_index
-    except Exception:
+    except Exception as ex:
+        # Return None on any failure so callers can surface an error to the
+        # client. Log the exception for debugging.
+        logger.exception("Failed to create or load vector index for %s", llm_choice)
         return None
 
 def get_environment_api_key(llm_choice: str) -> str:
@@ -248,6 +283,9 @@ def _message_to_text(msg) -> str:
             return "".join(parts)
         return str(content)
     except Exception:
+        # If anything goes wrong extracting the message text, return an empty
+        # string rather than propagating the exception into the stream.
+        logger.exception("Failed to extract text from message object")
         return ""
 
 @app.route("/api/prompt", methods=["POST"])
@@ -256,13 +294,26 @@ def receive_prompt():
     1. Retrieve frontend variables
     2. Create Langchain agent, return response 
     """
+    # Parse JSON body safely. `silent=True` prevents exceptions on invalid JSON.
     data = request.get_json(silent=True) or {}
+
+    # The raw user prompt text (what the user typed in the UI)
     prompt_text = data.get("prompt", "")
+
+    # Which LLM backend the user selected (e.g., 'gemini' or 'openai')
     llm_choice = data.get("llm_choice", "")
-    # Accept either 'target_language' or 'language' from the frontend
+
+    # Accept either 'target_language' or 'language' from the frontend for
+    # backward compatibility with different client payloads.
     target_language = data.get("target_language", "") or data.get("language", "")
-    # response_mode can be 'direct' or 'both'
+
+    # response_mode controls how we instruct the LLM:
+    # - 'direct': reply only in the target language
+    # - 'both': include original answer then a translated version separated
+    #           by a marker (e.g. '---TRANSLATION (Spanish)---')
     response_mode = data.get("response_mode", "direct")
+
+    # Basic validation: ensure caller selected an LLM and we have an API key
 
     if llm_choice == "":
         return jsonify({"ok": False, "error": "SNO: no LLM selected."}), 400
