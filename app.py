@@ -24,7 +24,54 @@ from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 
+import logging
+import sys
+import time
+import json
+import traceback
+
 app = Flask(__name__)
+
+# Application logger (console + optional file). Use DEBUG when requested.
+logger = logging.getLogger("vibe_app")
+logger.setLevel(logging.DEBUG if os.getenv("FLASK_DEBUG") == "1" or os.getenv("DEBUG_LOG") == "1" else logging.INFO)
+_fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+_ch = logging.StreamHandler(sys.stdout)
+_ch.setFormatter(_fmt)
+logger.addHandler(_ch)
+try:
+    _fh = logging.FileHandler("vibe_app.log")
+    _fh.setFormatter(_fmt)
+    logger.addHandler(_fh)
+except Exception:
+    # Best-effort file logging; continue if it fails
+    logger.warning("Could not create vibe_app.log (permission or path issue). Continuing without file logging.")
+
+
+@app.before_request
+def _log_request_info():
+    # Safely log basic request metadata and JSON body (if any). Avoid logging secrets.
+    try:
+        body = request.get_json(silent=True)
+    except Exception:
+        body = None
+    headers = {
+        "User-Agent": request.headers.get("User-Agent"),
+        "Content-Type": request.headers.get("Content-Type"),
+        "Host": request.headers.get("Host")
+    }
+    try:
+        logger.debug("Incoming request %s %s headers=%s json=%s", request.method, request.path, headers, json.dumps(body) if body is not None else None)
+    except Exception:
+        logger.debug("Incoming request %s %s (body not JSON-serializable)", request.method, request.path)
+
+
+@app.errorhandler(Exception)
+def _handle_unhandled_exception(e):
+    # Global fall-through for unexpected exceptions: log full traceback and return JSON
+    logger.error("Unhandled exception in request", exc_info=True)
+    tb = traceback.format_exc()
+    return jsonify({"ok": False, "error": "Unhandled server error.", "detail": str(e), "traceback": tb}), 500
 
 ''' Constants '''
 # Use a stable generally-available model name to avoid metadata lookup issues
@@ -164,6 +211,16 @@ def homepage():
     """ Render the homepage.html template """
     return render_template("homepage.html")
 
+
+@app.route("/planner")
+def planner():
+    """Placeholder route for planner (some templates reference this)."""
+    try:
+        return render_template("planner.html")
+    except Exception:
+        # Fallback simple response if the planner template isn't present
+        return "Planner page (template missing).", 200
+
 @app.route("/index")
 def index():
     """ Render the index.html template """
@@ -218,6 +275,8 @@ def receive_prompt():
     # a stacktrace to the server logs for diagnosis rather than returning a
     # generic 500 without information.
     try:
+        # Log key request parameters (do NOT log raw API keys)
+        logger.debug("/api/prompt called; llm_choice=%s target_language=%s response_mode=%s", llm_choice, target_language, response_mode)
         if llm_choice == "gemini":
             langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
                 model=GEMINI_MODEL,
@@ -270,8 +329,8 @@ def receive_prompt():
             model=langchain_llm,
             tools=tools
         )
-
         print("Agent made")
+        logger.debug("Agent created for llm_choice=%s", llm_choice)
         # If a target language is requested, prepend a clear instruction so the LLM
         # produces output in that language. Use a small mapping for friendly names.
         if target_language:
@@ -323,7 +382,33 @@ def receive_prompt():
                     f"Please respond ONLY in {lang_name}. All output should be in {lang_name}.\n\n"
                     f"User prompt:\n{prompt_text}"
                 )
+        
+        # Mock LLM mode: allow testing without external API calls. Enable by setting
+        # the environment variable MOCK_LLM=1 or including {"mock": true} in the POST body.
+        mock_mode = (os.getenv("MOCK_LLM", "0") == "1") or bool(data.get("mock", False))
+        if mock_mode:
+            logger.info("Mock LLM mode active - streaming a simulated response")
+            # Use a small generator to simulate streaming chunks
+            def mock_gen():
+                yield ""
+                time.sleep(0.01)
+                # main answer (shortened)
+                main = f"[MOCK ANSWER] Responding to: {prompt_text}"
+                for i in range(0, len(main), 100):
+                    yield main[i:i+100]
+                    time.sleep(0.01)
+                if response_mode == "both":
+                    marker = f"\n---TRANSLATION ({lang_name if 'lang_name' in locals() else target_language})---\n"
+                    for i in range(0, len(marker), 100):
+                        yield marker[i:i+100]
+                        time.sleep(0.01)
+                    trans = f"[MOCK TRANSLATION into {lang_name if 'lang_name' in locals() else target_language}]"
+                    for i in range(0, len(trans), 100):
+                        yield trans[i:i+100]
+                        time.sleep(0.01)
+                yield "\n"
 
+            return Response(stream_with_context(mock_gen()), mimetype="text/plain")
         @stream_with_context
         def generate():
             # Optional: small preamble so client can clear UI
