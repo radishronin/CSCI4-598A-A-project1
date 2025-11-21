@@ -11,13 +11,17 @@ import traceback
 
 import pandas as pd
 import pdfplumber
+from docx import Document as DocxDocument
+from pptx import Presentation
+from bs4 import BeautifulSoup
 from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
-from llama_index.core import Document, Settings, StorageContext, VectorStoreIndex, load_index_from_storage
+from llama_index.core import Document, Settings, StorageContext
+from llama_index.core import VectorStoreIndex, load_index_from_storage
 from llama_index.core.langchain_helpers.agents import IndexToolConfig, LlamaIndexTool
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.vector_stores.simple import SimpleVectorStore
@@ -28,6 +32,7 @@ rag_bp = Blueprint("rag", __name__, url_prefix = "/rag")
 
 # Constants
 GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_EMBEDDING_MODEL = "text-embedding-004"
 INDEX_PATH = "./rag_documents"
 API_KEY_PATH = "./api_keys"
 is_first_llm_run = 1
@@ -140,7 +145,7 @@ def initialize_embedding_model(llm_choice : str):
 
     if llm_choice == "gemini":
         embedding_model = GoogleGenAIEmbedding(
-            model_name = "text-embedding-004",
+            model_name = GEMINI_EMBEDDING_MODEL,
             api_key = get_environment_api_key(llm_choice),
             embedding_config = None,
             vertexai_config = None,
@@ -524,6 +529,8 @@ def upload_files():
                         extracted_text += f"\n\n--- Page {page_number} ---\n{text}\n"
                         
                         '''
+                        # Tried to do images, didn't go well
+                        # Discussed more in the paper
                         # Extract the images from the PDF
                         for image_idx, image in enumerate(page.images):
                             try:
@@ -602,7 +609,122 @@ def upload_files():
                 print(f"[FILE_UPLOAD] Error extracting text from {file_name}: {e}")
         
         elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            pass
+            # DOCX parsing (text + tables)
+            try:
+                docx_obj = DocxDocument(BytesIO(base64.b64decode(content_b64)))
+                for para in docx_obj.paragraphs:
+                    extracted_text += para.text + "\n"
+
+                # Tables
+                for table_idx, table in enumerate(docx_obj.tables, start=1):
+                    try:
+                        rows = [[cell.text for cell in row.cells] for row in table.rows]
+                        df = pd.DataFrame(rows)
+                        extracted_text += f"\n\n--- Table {table_idx} ---\n{df.to_string(index=False, header=False)}\n"
+                    except Exception as tbl_err:
+                        print(f"[DOCX TABLE] Error parsing table in {file_name}: {tbl_err}")
+                
+                if extracted_text.strip():
+                    doc = Document(text=extracted_text, metadata={"file_name": file_name, "file_type": file_type})
+                    nodes = splitter.get_nodes_from_documents([doc])
+                    print(f"[RAG] Inserting {len(nodes)} nodes for {file_name} (docx)...")
+                    vector_index.insert_nodes(nodes)
+                    print(f"[RAG] Inserted nodes for {file_name} (docx)")
+                    any_inserted = True
+            except Exception as e:
+                print(f"[FILE_UPLOAD] Error extracting text from {file_name} (docx): {e}")
+
+        elif file_type in ("application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.ms-powerpoint"):
+            # PPTX parsing (text from shapes + tables)
+            try:
+                prs = Presentation(BytesIO(base64.b64decode(content_b64)))
+                for slide_num, slide in enumerate(prs.slides, start=1):
+                    slide_text_parts = []
+                    for shape in slide.shapes:
+                        try:
+                            if hasattr(shape, "text") and shape.text:
+                                slide_text_parts.append(shape.text)
+                        except Exception:
+                            # Some shapes may throw on access; skip them
+                            continue
+
+                        # Table extraction (if present)
+                        try:
+                            if getattr(shape, "has_table", False):
+                                table = shape.table
+                                rows = []
+                                for r in table.rows:
+                                    cells = [c.text for c in r.cells]
+                                    rows.append(cells)
+                                df = pd.DataFrame(rows)
+                                slide_text_parts.append(f"\nTable:\n{df.to_string(index=False, header=False)}\n")
+                        except Exception:
+                            continue
+
+                    if slide_text_parts:
+                        extracted_text += f"\n\n--- Slide {slide_num} ---\n" + "\n".join(slide_text_parts) + "\n"
+
+                if extracted_text.strip():
+                    doc = Document(text=extracted_text, metadata={"file_name": file_name, "file_type": file_type})
+                    nodes = splitter.get_nodes_from_documents([doc])
+                    print(f"[RAG] Inserting {len(nodes)} nodes for {file_name} (pptx)...")
+                    vector_index.insert_nodes(nodes)
+                    print(f"[RAG] Inserted nodes for {file_name} (pptx)")
+                    any_inserted = True
+            except Exception as e:
+                print(f"[FILE_UPLOAD] Error extracting text from {file_name} (pptx): {e}")
+
+        elif file_type in ("text/plain", "text/markdown"):
+            # Plain text / Markdown
+            try:
+                text = base64.b64decode(content_b64).decode("utf-8", errors="replace")
+                extracted_text += text
+                if extracted_text.strip():
+                    doc = Document(text=extracted_text, metadata={"file_name": file_name, "file_type": file_type})
+                    nodes = splitter.get_nodes_from_documents([doc])
+                    print(f"[RAG] Inserting {len(nodes)} nodes for {file_name} (text)...")
+                    vector_index.insert_nodes(nodes)
+                    print(f"[RAG] Inserted nodes for {file_name} (text)")
+                    any_inserted = True
+            except Exception as e:
+                print(f"[FILE_UPLOAD] Error extracting text from {file_name} (text): {e}")
+
+        elif file_type == "text/html":
+            # HTML parsing: extract visible text and simple table conversion
+            try:
+                html = base64.b64decode(content_b64).decode("utf-8", errors="replace")
+                soup = BeautifulSoup(html, "lxml")
+                # Remove script/style
+                for s in soup(["script", "style"]):
+                    s.extract()
+
+                # Extract tables
+                for t_idx, table in enumerate(soup.find_all("table"), start=1):
+                    try:
+                        rows = []
+                        for tr in table.find_all("tr"):
+                            cells = [td.get_text(separator=" ", strip=True) for td in tr.find_all(["td", "th"])]
+                            rows.append(cells)
+                        if rows:
+                            df = pd.DataFrame(rows)
+                            extracted_text += f"\n\n--- HTML Table {t_idx} ---\n{df.to_string(index=False, header=False)}\n"
+                    except Exception as et:
+                        print(f"[HTML TABLE] Error parsing table in {file_name}: {et}")
+
+                # Visible text
+                visible = soup.get_text(separator="\n", strip=True)
+                extracted_text += "\n" + visible
+
+                if extracted_text.strip():
+                    doc = Document(text=extracted_text, metadata={"file_name": file_name, "file_type": file_type})
+                    nodes = splitter.get_nodes_from_documents([doc])
+                    print(f"[RAG] Inserting {len(nodes)} nodes for {file_name} (html)...")
+                    vector_index.insert_nodes(nodes)
+                    print(f"[RAG] Inserted nodes for {file_name} (html)")
+                    any_inserted = True
+
+            except Exception as e:
+                print(f"[FILE_UPLOAD] Error extracting text from {file_name} (html): {e}")
 
         else:
             print(f"[FILE_UPLOAD] Unsupported file type or empty content: name={file_name}, type={file_type}")
