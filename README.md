@@ -88,7 +88,21 @@ docker run -p 5000:5000 \
   llm-app
 ```
 
-**Note:** On Windows PowerShell, use the provided script.
+**Note:** On Windows PowerShell, use the provided script `docker-run.ps1`.
+
+For Bash or POSIX-compatible shells (Linux, macOS, WSL, Git Bash), a convenience script
+is also included: `docker-run.sh`.
+
+Make the script executable and run it from the project root:
+
+```bash
+chmod +x docker-run.sh
+./docker-run.sh
+```
+
+The Bash script mirrors the PowerShell script's behavior: it creates `api_keys/` and
+`rag_documents/` if missing, builds the Docker image, stops/removes any existing
+`csci-rag-container`, and runs the container with the correct volume mounts and port mapping.
 
 ### Container Management
 

@@ -339,9 +339,111 @@ def receive_prompt():
         print("Vector index made")
 
         # Create a query engine and expose it as a text-returning tool
-        query_engine = vector_index.as_query_engine(similarity_top_k=5)
+        query_engine = vector_index.as_query_engine(
+            similarity_top_k=10,    # how many docs are returned to the synthesizer
+            fetch_k=50,             # how many are fetched from the store before reranking
+            similarity_cutoff=0.1,  # include lower-similarity candidates (raise if too noisy)
+            response_mode="compact" # try 'compact' or 'tree_summarize' depending on your llama-index version
+        )
+        
+        # Monkey-patch the created query_engine to add lightweight debug logging
+        # for retrievals without changing its type (avoids pydantic type checks).
+        def _add_debug_wrappers(qe):
+            def make_wrapper(orig_fn):
+                def wrapper(*args, **kwargs):
+                    try:
+                        print("[RAG DEBUG] Running query with args=", args, "kwargs=", {k:v for k,v in kwargs.items() if k!='messages'})
+                    except Exception:
+                        pass
+                    res = orig_fn(*args, **kwargs)
+                    try:
+                        nodes = None
+                        if hasattr(res, 'source_nodes'):
+                            nodes = res.source_nodes
+                        elif isinstance(res, dict) and 'source_nodes' in res:
+                            nodes = res['source_nodes']
+                        elif hasattr(res, 'extra_info') and isinstance(res.extra_info, dict):
+                            nodes = res.extra_info.get('source_nodes')
 
-        print("Query engine made")
+                        if nodes:
+                            print(f"[RAG DEBUG] Retrieved {len(nodes)} nodes:")
+                            for i, n in enumerate(nodes, start=1):
+                                try:
+                                    meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
+                                    text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
+                                    score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
+                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:200]).replace('\n',' ')}")
+                                except Exception as e:
+                                    print(f"  {i}. <failed to print node>: {e}")
+                        else:
+                            print("[RAG DEBUG] No source_nodes found on result; result type:", type(res))
+                    except Exception as e:
+                        print("[RAG DEBUG] Error while extracting nodes:", e)
+                    return res
+                return wrapper
+
+            # Try to wrap common methods without changing the object's type
+            for name in ("query", "run", "__call__"):
+                orig = getattr(qe, name, None)
+                if callable(orig):
+                    try:
+                        setattr(qe, name, make_wrapper(orig))
+                    except Exception as e:
+                        print(f"[RAG DEBUG] Failed to patch method {name}: {e}")
+
+        try:
+            _add_debug_wrappers(query_engine)
+            print("Query engine made and monkey-patched with debug wrappers")
+        except Exception as e:
+            print("[RAG DEBUG] Failed to add debug wrappers:", e)
+
+        # Optional retrieval-only debug (no agent) to inspect what the retriever returns.
+        # Enable by setting environment variable RAG_RETRIEVE_DEBUG=1. This may
+        # invoke the retriever and/or the LLM depending on the engine implementation.
+        if os.getenv("RAG_RETRIEVE_DEBUG", "0") == "1":
+            test_query = prompt_text or "test retrieval"
+            tried = []
+            methods = ["retrieve", "retrieve_nodes", "get_relevant_documents", "query", "run", "__call__"]
+            for m in methods:
+                fn = getattr(query_engine, m, None)
+                if callable(fn):
+                    try:
+                        print(f"[RAG RETRIEVE DEBUG] Calling method: {m}()")
+                        # Some methods expect different signatures; try common ones.
+                        try:
+                            r = fn(test_query)
+                        except TypeError:
+                            # Try passing as kwargs
+                            r = fn(query=test_query)
+                        print(f"[RAG RETRIEVE DEBUG] Result type from {m}:", type(r))
+                        # Try to extract source_nodes or documents
+                        nodes = None
+                        if hasattr(r, 'source_nodes'):
+                            nodes = r.source_nodes
+                        elif isinstance(r, dict) and 'source_nodes' in r:
+                            nodes = r['source_nodes']
+                        elif hasattr(r, 'documents'):
+                            nodes = r.documents
+                        elif isinstance(r, list) and r and hasattr(r[0], 'metadata'):
+                            nodes = r
+
+                        if nodes:
+                            print(f"[RAG RETRIEVE DEBUG] {m} returned {len(nodes)} nodes:")
+                            for i, n in enumerate(nodes, start=1):
+                                try:
+                                    meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
+                                    text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
+                                    score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
+                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
+                                except Exception as e:
+                                    print(f"  {i}. <failed to print node>: {e}")
+                        else:
+                            print(f"[RAG RETRIEVE DEBUG] {m} did not return nodes (raw result: {r})")
+                        tried.append(m)
+                    except Exception as e:
+                        print(f"[RAG RETRIEVE DEBUG] call {m} failed: {e}")
+            if not tried:
+                print("[RAG RETRIEVE DEBUG] No retrieval methods found on query_engine to call.")
 
         query_tool_config = IndexToolConfig(
             query_engine = query_engine,
@@ -351,6 +453,61 @@ def receive_prompt():
 
         query_engine_tool = LlamaIndexTool.from_tool_config(query_tool_config)
         print("Tool made")
+
+        # Wrap the tool object's callable entrypoints so we log when the agent
+        # invokes the tool. This captures agent -> tool calls that may bypass
+        # direct query_engine method invocations.
+        try:
+            def _wrap_tool_invocation(tool_obj):
+                # Try common method names and wrap the first callable we find.
+                for method_name in ("run", "__call__", "invoke", "execute", "query"):
+                    orig = getattr(tool_obj, method_name, None)
+                    if callable(orig):
+                        def make_wrapper(orig_fn, method_name=method_name):
+                            def wrapper(*args, **kwargs):
+                                try:
+                                    print(f"[RAG TOOL DEBUG] Tool invoked via {method_name} args=", args, "kwargs=", {k:v for k,v in kwargs.items() if k!='messages'})
+                                except Exception:
+                                    pass
+                                res = orig_fn(*args, **kwargs)
+                                # Try to extract retrieved nodes/documents from result
+                                try:
+                                    nodes = None
+                                    if hasattr(res, 'source_nodes'):
+                                        nodes = res.source_nodes
+                                    elif isinstance(res, dict) and 'source_nodes' in res:
+                                        nodes = res['source_nodes']
+                                    elif hasattr(res, 'documents'):
+                                        nodes = res.documents
+                                    elif isinstance(res, list) and res and hasattr(res[0], 'metadata'):
+                                        nodes = res
+
+                                    if nodes:
+                                        print(f"[RAG TOOL DEBUG] {method_name} returned {len(nodes)} nodes:")
+                                        for i, n in enumerate(nodes, start=1):
+                                            try:
+                                                meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
+                                                text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
+                                                score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
+                                                print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
+                                            except Exception as e:
+                                                print(f"  {i}. <failed to print node>: {e}")
+                                    else:
+                                        print(f"[RAG TOOL DEBUG] {method_name} did not return nodes; raw result type: {type(res)}")
+                                except Exception as e:
+                                    print("[RAG TOOL DEBUG] Error while extracting nodes from tool result:", e)
+                                return res
+                            return wrapper
+                        try:
+                            setattr(tool_obj, method_name, make_wrapper(orig))
+                            print(f"[RAG TOOL DEBUG] Wrapped tool method: {method_name}")
+                        except Exception as e:
+                            print(f"[RAG TOOL DEBUG] Failed to wrap tool method {method_name}: {e}")
+                        break
+
+            _wrap_tool_invocation(query_engine_tool)
+        except Exception as e:
+            print("[RAG TOOL DEBUG] Exception while attempting to wrap tool invocations:", e)
 
         tools = [query_engine_tool]
 
@@ -446,6 +603,15 @@ def receive_prompt():
             yield ""
 
             for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
+                # Optional stream-step debugging: when RAG_DEBUG=1, print step summary
+                if os.getenv("RAG_DEBUG", "0") == "1":
+                    try:
+                        # Avoid printing large structures; show keys and small repr
+                        keys = list(step.keys()) if isinstance(step, dict) else []
+                        print(f"[RAG STREAM DEBUG] step keys={keys} type={type(step)}")
+                    except Exception:
+                        pass
+
                 msg = step["messages"][-1]
 
                 # Only yield if the message is from the AI (not Human)
