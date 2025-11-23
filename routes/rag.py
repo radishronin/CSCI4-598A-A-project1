@@ -37,6 +37,8 @@ INDEX_PATH = "./rag_documents"
 API_KEY_PATH = "./api_keys"
 is_first_llm_run = 1
 is_first_embed_run = 1
+# Notes storage file (simple JSON store)
+NOTES_FILE = os.path.join(".", "notes.json")
 
 @rag_bp.route("/")
 def rag():
@@ -270,6 +272,92 @@ def _message_to_text(msg) -> str:
         # string rather than propagating the exception into the stream.
         logger.exception("Failed to extract text from message object")
         return ""
+
+
+# ---------------------- Notes helpers and endpoints ------------------------
+def _load_notes():
+    """Load notes list from NOTES_FILE. Returns list of note dicts."""
+    try:
+        if not os.path.exists(NOTES_FILE):
+            return []
+        with open(NOTES_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            return []
+    except Exception:
+        logger.exception("Failed to load notes file")
+        return []
+
+
+def _save_notes(notes):
+    """Persist notes list to NOTES_FILE atomically."""
+    try:
+        tmp = NOTES_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(notes, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, NOTES_FILE)
+        return True
+    except Exception:
+        logger.exception("Failed to save notes file")
+        return False
+
+
+@rag_bp.route("/api/notes", methods=["GET"]) 
+def list_notes():
+    """Return JSON array of saved notes."""
+    notes = _load_notes()
+    return jsonify({"ok": True, "notes": notes})
+
+
+@rag_bp.route("/api/notes", methods=["POST"])
+def create_or_update_note():
+    """Create a new note or update an existing one. Expects JSON {title, content, id?}."""
+    data = request.get_json(silent=True) or {}
+    title = data.get("title", "")
+    content = data.get("content", "")
+    note_id = data.get("id")
+
+    notes = _load_notes()
+    # If id provided, update
+    if note_id is not None:
+        for n in notes:
+            if n.get("id") == note_id:
+                n["title"] = title
+                n["content"] = content
+                n["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                _save_notes(notes)
+                return jsonify({"ok": True, "note": n})
+        # If not found, fall through to create new
+
+    # Create new note with incremental id
+    max_id = max((n.get("id", 0) for n in notes), default=0)
+    new = {
+        "id": max_id + 1,
+        "title": title,
+        "content": content,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+    notes.append(new)
+    ok = _save_notes(notes)
+    if not ok:
+        return jsonify({"ok": False, "error": "Failed to persist note."}), 500
+    return jsonify({"ok": True, "note": new})
+
+
+@rag_bp.route("/api/notes/<int:note_id>", methods=["DELETE"])
+def delete_note(note_id: int):
+    """Delete the note with the given id."""
+    notes = _load_notes()
+    new_notes = [n for n in notes if n.get("id") != note_id]
+    if len(new_notes) == len(notes):
+        return jsonify({"ok": False, "error": "Note not found."}), 404
+    ok = _save_notes(new_notes)
+    if not ok:
+        return jsonify({"ok": False, "error": "Failed to persist notes."}), 500
+    return jsonify({"ok": True})
+
+# ---------------------- End notes helpers ---------------------------------
 
 @rag_bp.route("/api/prompt", methods=["POST"])
 def receive_prompt():

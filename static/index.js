@@ -41,9 +41,9 @@
 
   async function submitPrompt() {
     const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
-    const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
-    const targetLanguage = document.getElementById('language-select')?.value || 'en';
-    const responseMode = document.getElementById('mode-select')?.value || 'direct';
+  const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
+  const targetLanguage = document.getElementById('language-select')?.value || 'en';
+  const responseMode = document.getElementById('mode-select')?.value || 'direct';
 
     if (!llmChoice) {
       alert('Please select an LLM.');
@@ -63,7 +63,7 @@
     showSpinner();
     
     try {
-      const res = await fetch('/rag/api/prompt', {
+      const res = await fetch('/api/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -145,7 +145,7 @@
     }
     
     try {
-      const response = await fetch('/rag/api/set-api-key', {
+      const response = await fetch('/api/set-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -210,6 +210,94 @@
     fileInput.addEventListener('change', handleFileSelection);
   }
 
+  // ---------------- Notes UI handling ----------------
+  const saveNoteButton = document.getElementById('save-note-button');
+  const notesTitle = document.getElementById('notes-title');
+  const notesContent = document.getElementById('notes-content');
+  const notesUL = document.getElementById('notes-ul');
+
+  async function loadNotes() {
+    try {
+      const res = await fetch('/rag/api/notes');
+      const data = await res.json();
+      if (data && data.ok) {
+        renderNotes(data.notes || []);
+      }
+    } catch (err) {
+      console.error('Failed to load notes', err);
+    }
+  }
+
+  function renderNotes(notes) {
+    if (!notesUL) return;
+    notesUL.innerHTML = '';
+    notes.forEach(n => {
+      const li = document.createElement('li');
+      const title = n.title ? n.title : (`Note ${n.id}`);
+      li.innerHTML = `<strong>${escapeHtml(title)}</strong> <button data-id="${n.id}" class="delete-note">Delete</button><div class="note-content">${escapeHtml(n.content)}</div>`;
+      notesUL.appendChild(li);
+    });
+    // Attach delete handlers
+    notesUL.querySelectorAll('.delete-note').forEach(btn => {
+      btn.addEventListener('click', async function (e) {
+        const id = this.getAttribute('data-id');
+        if (!confirm('Delete this note?')) return;
+        try {
+          const res = await fetch(`/rag/api/notes/${id}`, { method: 'DELETE' });
+          const payload = await res.json();
+          if (payload && payload.ok) {
+            loadNotes();
+          } else {
+            alert('Failed to delete note');
+          }
+        } catch (err) {
+          console.error('Failed to delete note', err);
+          alert('Error deleting note');
+        }
+      });
+    });
+  }
+
+  async function saveNote() {
+    const title = notesTitle?.value?.trim() || '';
+    const content = notesContent?.value?.trim() || '';
+    if (!content) {
+      alert('Please add some note content');
+      return;
+    }
+    try {
+      const res = await fetch('/rag/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content })
+      });
+      const payload = await res.json();
+      if (payload && payload.ok) {
+        notesTitle.value = '';
+        notesContent.value = '';
+        loadNotes();
+      } else {
+        alert('Failed to save note');
+      }
+    } catch (err) {
+      console.error('Failed to save note', err);
+      alert('Error saving note');
+    }
+  }
+
+  function escapeHtml(unsafe) {
+    return (unsafe || '').replace(/[&<>"]+/g, function (m) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m];
+    });
+  }
+
+  if (saveNoteButton) {
+    saveNoteButton.addEventListener('click', saveNote);
+  }
+
+  // Load notes on startup
+  loadNotes();
+
   async function handleFileSelection(event) {
     const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
 
@@ -256,7 +344,7 @@
     await Promise.all(fileReadPromises);
 
     try {
-      const response = await fetch('/rag/api/upload-files', {
+      const response = await fetch('/api/upload-files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file_paths: filePaths, llmChoice : llmChoice })
