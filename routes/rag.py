@@ -62,7 +62,7 @@ except Exception:
     # Module overview
     #
     # This Flask application provides a small web UI and API to interact with
-    # LLM backends (Gemini). It supports:
+    # different LLM backends (Gemini, OpenAI). It supports:
     # - Setting API keys (persisted to ./api_keys/{llm_name})
     # - Uploading files to be indexed for RAG (stored under ./rag_documents)
     # - Sending prompts to an agent that uses the LLM + a LlamaIndex toolset
@@ -283,8 +283,8 @@ def receive_prompt():
     # The raw user prompt text (what the user typed in the UI)
     prompt_text = data.get("prompt", "")
 
-    # Which LLM backend the user selected (e.g., 'gemini')
-    llm_choice = data.get("llm_choice", "gemini")
+    # Which LLM backend the user selected (e.g., 'gemini' or 'openai')
+    llm_choice = data.get("llm_choice", "")
 
     # Accept either 'target_language' or 'language' from the frontend for
     # backward compatibility with different client payloads.
@@ -653,11 +653,10 @@ def set_api_key():
 
 @rag_bp.route("/api/upload-files", methods=["POST"])
 def upload_files():
-    print("Here1")
     """ Handle file uploads and print file information """
     data = request.get_json(silent=True) or {}
     files = data.get("file_paths", [])
-    llm_choice = data.get("llmChoice", "gemini")
+    llm_choice = data.get("llmChoice", "")
     
     api_key: str = get_environment_api_key(llm_choice)
     if api_key == "":
