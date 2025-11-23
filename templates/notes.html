@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notes - LLM Study Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    .notes-container { max-width: 800px; margin: 1rem auto; }
+    .notes-list ul { list-style: none; padding-left: 0; }
+    .notes-list li { border-bottom: 1px solid #eee; padding: 0.5rem 0; }
+    .note-content { white-space: pre-wrap; margin-top: 0.25rem; }
+  </style>
+</head>
+<body>
+  <main class="container notes-container" role="main">
+    <header>
+      <h1>Notes</h1>
+      <p class="intro">Create and manage quick notes. Notes are stored locally on the server in a simple JSON file.</p>
+      <div class="actions">
+        <a href="{{ url_for('rag.rag') }}" class="btn">Back to Interface</a>
+      </div>
+    </header>
+
+    <section class="row" aria-labelledby="notes-label">
+      <label id="notes-label" for="notes-title">Note title (optional)</label>
+      <input id="notes-title" type="text" placeholder="Note title (optional)" />
+      <label for="notes-content">Content</label>
+      <textarea id="notes-content" name="notes" placeholder="Write a note..." rows="10"></textarea>
+      <div class="actions">
+        <button id="save-note-button" type="button">Save note</button>
+      </div>
+    </section>
+
+    <section class="row notes-list" aria-labelledby="saved-notes">
+      <h2 id="saved-notes">Saved notes</h2>
+      <ul id="notes-ul"></ul>
+    </section>
+  </main>
+
+  <!-- Include the main frontend script which contains notes handlers -->
+  <script src="{{ url_for('static', filename='index.js') }}"></script>
+</body>
+</html>

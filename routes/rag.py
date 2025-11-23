@@ -246,6 +246,15 @@ def planner():
         # Fallback simple response if the planner template isn't present
         return "Planner page (template missing).", 200
 
+
+@rag_bp.route('/notes')
+def notes():
+    """Render the dedicated notes page."""
+    try:
+        return render_template('notes.html')
+    except Exception:
+        return "Notes page template missing.", 200
+
 def _message_to_text(msg) -> str:
     """Extract plain text from message content which can be a str or list of parts."""
     try:

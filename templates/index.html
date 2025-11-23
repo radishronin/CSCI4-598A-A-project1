@@ -17,6 +17,7 @@
       </p>
       <div class="page-links">
         <a class="btn secondary" href="{{ url_for('rag.planner') }}">Try Campus Path Planner</a>
+        <a class="btn" href="{{ url_for('rag.notes') }}">Notes</a>
       </div>
     </header>
 
@@ -97,18 +98,7 @@
       </div>
     </section>
 
-    <section class="row" aria-labelledby="notes-label">
-      <label id="notes-label" for="notes-title">Notes</label>
-      <input id="notes-title" type="text" placeholder="Note title (optional)" />
-      <textarea id="notes-content" name="notes" placeholder="Write a note..." rows="6"></textarea>
-      <div class="actions">
-        <button id="save-note-button" type="button">Save note</button>
-      </div>
-      <div id="notes-list" class="notes-list">
-        <h3>Saved notes</h3>
-        <ul id="notes-ul"></ul>
-      </div>
-    </section>
+    <!-- Notes were moved to a dedicated page: /rag/notes -->
   </main>
 
   <!-- Fullscreen Loading Spinner -->
