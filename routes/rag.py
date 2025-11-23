@@ -372,7 +372,9 @@ def receive_prompt():
                                     meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                     text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                     score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:200]).replace('\n',' ')}")
+                                    # Prepare a safe, single-line snippet for logging
+                                    text_snippet = ((text or '')[:200]).replace('\n', ' ')
+                                    print(f"  {i}. score={score} metadata={meta} text_snippet={text_snippet}")
                                 except Exception as e:
                                     print(f"  {i}. <failed to print node>: {e}")
                         else:
@@ -434,7 +436,9 @@ def receive_prompt():
                                     meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                     text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                     score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
+                                    # Prepare a safe, single-line snippet for logging
+                                    text_snippet = ((text or '')[:300]).replace('\n', ' ')
+                                    print(f"  {i}. score={score} metadata={meta} text_snippet={text_snippet}")
                                 except Exception as e:
                                     print(f"  {i}. <failed to print node>: {e}")
                         else:
@@ -489,7 +493,9 @@ def receive_prompt():
                                                 meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                                 text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                                 score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                                print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
+                                                # Prepare a safe, single-line snippet for logging
+                                                text_snippet = ((text or '')[:300]).replace('\n', ' ')
+                                                print(f"  {i}. score={score} metadata={meta} text_snippet={text_snippet}")
                                             except Exception as e:
                                                 print(f"  {i}. <failed to print node>: {e}")
                                     else:
