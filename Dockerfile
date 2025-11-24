@@ -39,8 +39,13 @@ EXPOSE 5000
 
 # Set environment variables for Flask
 ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
+ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
+ENV DEBUG_LOG=1
+ENV RAG_DEBUG=1
+ENV RAG_RETRIEVE_DEBUG=1
 ENV PYTHONUNBUFFERED=1
+ENV MOCK_LLM=0
 
 # Run Flask application
 # Use 0.0.0.0 to make it accessible from outside the container

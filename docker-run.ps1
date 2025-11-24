@@ -64,6 +64,12 @@ Write-Host ""
 
 docker run -d `
     --name $containerName `
+    -e "FLASK_ENV=development" `
+    -e "FLASK_DEBUG=1" `
+    -e "DEBUG_LOG=1" `
+    -e "RAG_DEBUG=1" `
+    -e "RAG_RETRIEVE_DEBUG=1" `
+    -e "MOCK_LLM=0" `
     -p 5000:5000 `
     -v "${ragDirMount}:/app/rag_documents" `
     -v "${apiKeysDirMount}:/app/api_keys" `

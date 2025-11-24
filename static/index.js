@@ -2,7 +2,6 @@
   const textarea = document.getElementById('prompt-input');
   const button = document.getElementById('enter-button');
 
-  let currentLLMChoice = '';
   let currentPrompt = '';
 
   function setOutput(text) {
@@ -41,21 +40,14 @@
 
   async function submitPrompt() {
     const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
-  const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
-  const targetLanguage = document.getElementById('language-select')?.value || 'en';
-  const responseMode = document.getElementById('mode-select')?.value || 'direct';
-
-    if (!llmChoice) {
-      alert('Please select an LLM.');
-      return;
-    }
+    const targetLanguage = document.getElementById('language-select')?.value || 'en';
+    const responseMode = document.getElementById('mode-select')?.value || 'direct';
 
     if (!value) {
       alert('Please input something.')
       return;
     }
     
-    currentLLMChoice = llmChoice;
     currentPrompt = value;
 
     // Clear output and show spinner
@@ -63,12 +55,11 @@
     showSpinner();
     
     try {
-      const res = await fetch('/api/prompt', {
+      const res = await fetch('/rag/api/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: value, 
-          llm_choice: llmChoice, 
           target_language: targetLanguage,
           response_mode: responseMode
         })
@@ -81,7 +72,7 @@
         const payload = await res.json();
         if (payload && payload.error === 'NO API key set.') {
           hideSpinner();
-          showApiKeyModal(llmChoice);
+          showApiKeyModal("gemini");
           document.getElementById('prompt-input').value = '';
           return;
         }
@@ -145,11 +136,11 @@
     }
     
     try {
-      const response = await fetch('/api/set-api-key', {
+      const response = await fetch('/rag/api/set-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          llm_choice: currentLLMChoice, 
+          llm_choice: "gemini", 
           api_key: apiKey 
         })
       });
@@ -299,14 +290,6 @@
   loadNotes();
 
   async function handleFileSelection(event) {
-    const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
-
-    if (!llmChoice) {
-      alert('Please select an LLM.');
-      fileInput.value = '';
-      return;
-    }
-
     const files = event.target.files;
 
     if (files.length === 0) {
@@ -344,10 +327,10 @@
     await Promise.all(fileReadPromises);
 
     try {
-      const response = await fetch('/api/upload-files', {
+      const response = await fetch('/rag/api/upload-files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_paths: filePaths, llmChoice : llmChoice })
+        body: JSON.stringify({ file_paths: filePaths })
       });
       
       const result = await response.json();
