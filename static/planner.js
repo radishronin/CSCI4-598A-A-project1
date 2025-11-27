@@ -65,18 +65,25 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Read language and response mode controls if present
+    const langSelect = document.getElementById('planner-language');
+    const modeSelect = document.getElementById('planner-response-mode');
+    const target_language = langSelect ? langSelect.value : '';
+    const response_mode = modeSelect ? modeSelect.value : 'direct';
+
     try {
       const response = await fetch('/planner/route', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ buildings: codes }),
+        body: JSON.stringify({ buildings: codes, target_language, response_mode }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error || 'Unable to compute route.';
+        const localized = (errorData && errorData.localized) || {};
+        const errorMsg = localized.error_message || errorData.error || 'Unable to compute route.';
         showError(errorMsg);
         return;
       }
@@ -88,9 +95,19 @@ document.addEventListener('DOMContentLoaded', () => {
         data.legs.forEach(renderLeg);
       }
 
+      // Prefer localized strings returned by the server when available.
+      const localized = (data && data.localized) || {};
+      const minutes = (data.total_time_s / 60).toFixed(1);
+
       if (totalTimeEl && typeof data.total_time_s === 'number') {
-        const minutes = (data.total_time_s / 60).toFixed(1);
-        totalTimeEl.textContent = `Total time: ${minutes} min`;
+        if (localized.total_time_format) {
+          // Server provided a formatted label (may include unit)
+          totalTimeEl.textContent = localized.total_time_format.replace('{minutes}', minutes);
+        } else {
+          const unit = localized.minutes_unit || 'min';
+          const label = localized.total_time_label || 'Total time:';
+          totalTimeEl.textContent = `${label} ${minutes} ${unit}`;
+        }
       }
     } catch (err) {
       showError('An unexpected error occurred while fetching the route.');
@@ -101,3 +118,4 @@ document.addEventListener('DOMContentLoaded', () => {
     generateBtn.addEventListener('click', handleGenerate);
   }
 });
+    const langSelect = document.getElementById('planner-language');

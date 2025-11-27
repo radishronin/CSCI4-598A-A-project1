@@ -167,14 +167,80 @@ def compute_route():
 
     data = request.get_json(force=True, silent=True) or {}
     building_codes: List[str] = data.get("buildings", [])
+    # Optional language features
+    target_language: str = data.get("target_language", "") or ""
+    response_mode: str = data.get("response_mode", "direct")
+
+    def _localized_strings(lang: str) -> dict:
+        """Return a small set of localized UI strings for the planner.
+
+        This is intentionally minimal: it covers the total-time label and
+        a few common error messages. If you want richer translations we can
+        either extend this map or call the project's LLM translation helper.
+        """
+        # Basic translations for a few languages. Keys: total_time_label,
+        # minutes_unit, total_time_format (optional), error messages.
+        translations = {
+            "": {
+                "total_time_label": "Total time:",
+                "minutes_unit": "min",
+                "error_invalid": "Request must include a list of building codes.",
+                "error_unknown_codes": "Unknown building codes:",
+                "error_no_path": "No available path between {from_code} and {to_code}.",
+            },
+            "en": {
+                "total_time_label": "Total time:",
+                "minutes_unit": "min",
+                "error_invalid": "Request must include a list of building codes.",
+                "error_unknown_codes": "Unknown building codes:",
+                "error_no_path": "No available path between {from_code} and {to_code}.",
+            },
+            "es": {
+                "total_time_label": "Tiempo total:",
+                "minutes_unit": "min",
+                "error_invalid": "La solicitud debe incluir una lista de códigos de edificio.",
+                "error_unknown_codes": "Códigos de edificio desconocidos:",
+                "error_no_path": "No hay un camino disponible entre {from_code} y {to_code}.",
+            },
+            "fr": {
+                "total_time_label": "Durée totale:",
+                "minutes_unit": "min",
+                "error_invalid": "La requête doit inclure une liste de codes de bâtiments.",
+                "error_unknown_codes": "Codes de bâtiment inconnus:",
+                "error_no_path": "Aucun itinéraire disponible entre {from_code} et {to_code}.",
+            },
+            "de": {
+                "total_time_label": "Gesamtzeit:",
+                "minutes_unit": "Min",
+                "error_invalid": "Die Anfrage muss eine Liste von Gebäudecodes enthalten.",
+                "error_unknown_codes": "Unbekannte Gebäudecodes:",
+                "error_no_path": "Kein verfügbarer Weg zwischen {from_code} und {to_code}.",
+            },
+            "zh": {
+                "total_time_label": "总用时:",
+                "minutes_unit": "分",
+                "error_invalid": "请求必须包含建筑代码列表。",
+                "error_unknown_codes": "未知的建筑代码:",
+                "error_no_path": "在 {from_code} 和 {to_code} 之间没有可用路径。",
+            }
+        }
+        return translations.get(lang, translations.get(lang.split('-')[0], translations[""]))
 
     if not isinstance(building_codes, list) or not building_codes:
-        return jsonify({"error": "Request must include a list of building codes."}), 400
+        localized = _localized_strings(target_language)
+        return (
+            jsonify({"error": localized.get("error_invalid"), "localized": localized}),
+            400,
+        )
 
     invalid_codes = [code for code in building_codes if code not in (_buildings_by_id or {})]
     if invalid_codes:
+        localized = _localized_strings(target_language)
         return (
-            jsonify({"error": f"Unknown building codes: {', '.join(invalid_codes)}"}),
+            jsonify({
+                "error": f"Unknown building codes: {', '.join(invalid_codes)}",
+                "localized": {"error_message": f"{localized.get('error_unknown_codes')} {', '.join(invalid_codes)}"},
+            }),
             400,
         )
 
@@ -188,8 +254,12 @@ def compute_route():
     for start_code, end_code in zip(building_codes, building_codes[1:]):
         leg_time, node_path = _shortest_path_between_buildings(start_code, end_code, adjacency)
         if leg_time is None or not node_path:
+            localized = _localized_strings(target_language)
             return (
-                jsonify({"error": f"No available path between {start_code} and {end_code}."}),
+                jsonify({
+                    "error": f"No available path between {start_code} and {end_code}.",
+                    "localized": {"error_message": localized.get("error_no_path").format(from_code=start_code, to_code=end_code)},
+                }),
                 400,
             )
 
@@ -224,17 +294,37 @@ def compute_route():
 
     image = graph.get("image", {})
 
-    return jsonify(
-        {
-            "image": {
-                "width_px": image.get("width_px"),
-                "height_px": image.get("height_px"),
-                "url": url_for("planner.campus_map"),
-            },
-            "legs": legs,
-            "total_time_s": total_time_s,
+    localized = _localized_strings(target_language)
+
+    response_payload = {
+        "image": {
+            "width_px": image.get("width_px"),
+            "height_px": image.get("height_px"),
+            "url": url_for("planner.campus_map"),
+        },
+        "legs": legs,
+        "total_time_s": total_time_s,
+        "localized": {},
+    }
+
+    # If the client requested 'both', include original (English) and localized
+    # messages. Otherwise provide only localized strings to be used by the UI.
+    if response_mode == "both":
+        response_payload["localized"]["original"] = {
+            "total_time_label": "Total time:",
+            "minutes_unit": "min",
+            "total_time_format": "{minutes} min",
         }
-    )
+
+    # Add the selected language strings (these may be identical to original)
+    response_payload["localized"].update({
+        "total_time_label": localized.get("total_time_label"),
+        "minutes_unit": localized.get("minutes_unit"),
+        # Provide a simple formatting token the client can use if desired
+        "total_time_format": "{minutes} " + localized.get("minutes_unit", "min"),
+    })
+
+    return jsonify(response_payload)
 
 
 @planner_bp.route("/campus-map")

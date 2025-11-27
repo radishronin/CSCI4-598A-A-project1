@@ -55,6 +55,27 @@
         <label id="planner-input-label" for="planner-building-input">Building Codes (in order)</label>
         <textarea id="planner-building-input" name="building-codes" placeholder="Example:\nBE\nBB\nGC\nCT"></textarea>
         <div class="planner-actions-row">
+          <div class="planner-controls">
+            <label for="planner-language">Language</label>
+            <select id="planner-language" name="planner-language">
+              <option value="">Auto (English)</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="zh">Chinese (Mandarin)</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+            </select>
+
+            <label for="planner-response-mode">Response Mode</label>
+            <select id="planner-response-mode" name="planner-response-mode">
+              <option value="direct">Direct (localized)</option>
+              <option value="both">Both (original + translated)</option>
+            </select>
+          </div>
           <button type="button" class="btn" id="btn-generate-route">Generate Path</button>
           <p class="planner-caption" id="planner-total-time" aria-live="polite"></p>
         </div>
