@@ -37,14 +37,6 @@ INDEX_PATH = "./rag_documents"
 API_KEY_PATH = "./api_keys"
 is_first_llm_run = 1
 is_first_embed_run = 1
-# Instruction to force the agent to call the retrieval tool for every user query
-RAG_TOOL_ENFORCE_INSTRUCTION = (
-    "IMPORTANT: This is a Retrieval-Augmented Generation (RAG) assistant. For EVERY user "
-    "question you MUST call the tool named 'RAG_Document_Search' to fetch relevant passages "
-    "from the uploaded document store before producing an answer. Use the retrieved passages "
-    "as evidence and prefer them over model-only speculation. If no relevant passages are "
-    "found, say so and do not invent facts."
-)
 # Notes storage file (simple JSON store)
 NOTES_FILE = os.path.join(".", "notes.json")
 
@@ -388,8 +380,8 @@ def receive_prompt():
     # The raw user prompt text (what the user typed in the UI)
     prompt_text = data.get("prompt", "")
 
-    # Which LLM backend the user selected (e.g., 'gemini')
-    llm_choice = data.get("llm_choice", "gemini")
+    # Which LLM backend the user selected (e.g., 'gemini' or 'openai')
+    llm_choice = data.get("llm_choice", "")
 
     # Accept either 'target_language' or 'language' from the frontend for
     # backward compatibility with different client payloads.
@@ -477,7 +469,9 @@ def receive_prompt():
                                     meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                     text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                     score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:200]).replace('\n',' ')}")
+                                    # Prepare a safe, single-line snippet for logging
+                                    text_snippet = ((text or '')[:200]).replace('\n', ' ')
+                                    print("  %s. score=%s metadata=%s text_snippet=%s" % (i, score, meta, text_snippet))
                                 except Exception as e:
                                     print(f"  {i}. <failed to print node>: {e}")
                         else:
@@ -539,7 +533,9 @@ def receive_prompt():
                                     meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                     text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                     score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
+                                    # Prepare a safe, single-line snippet for logging
+                                    text_snippet = ((text or '')[:300]).replace('\n', ' ')
+                                    print("  %s. score=%s metadata=%s text_snippet=%s" % (i, score, meta, text_snippet))
                                 except Exception as e:
                                     print(f"  {i}. <failed to print node>: {e}")
                         else:
@@ -552,12 +548,8 @@ def receive_prompt():
 
         query_tool_config = IndexToolConfig(
             query_engine = query_engine,
-            name = "RAG_Document_Search",
-            description=(
-                "Use this tool to search the uploaded document store for passages relevant to the user's question. "
-                "ALWAYS call this tool for factual, document-based, or specific queries about uploaded content. "
-                "Return retrieved passages and metadata and use them as evidence when composing answers."
-            ),
+            name = "CustomizedQueryingTool",
+            description=f"Performs retrieval-augmented generation from {llm_choice} vector store.",
         )
 
         query_engine_tool = LlamaIndexTool.from_tool_config(query_tool_config)
@@ -598,7 +590,9 @@ def receive_prompt():
                                                 meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                                 text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                                 score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                                print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
+                                                # Prepare a safe, single-line snippet for logging
+                                                text_snippet = ((text or '')[:300]).replace('\n', ' ')
+                                                print("  %s. score=%s metadata=%s text_snippet=%s" % (i, score, meta, text_snippet))
                                             except Exception as e:
                                                 print(f"  {i}. <failed to print node>: {e}")
                                     else:
@@ -615,7 +609,6 @@ def receive_prompt():
                         break
 
             _wrap_tool_invocation(query_engine_tool)
-        
         except Exception as e:
             print("[RAG TOOL DEBUG] Exception while attempting to wrap tool invocations:", e)
 
@@ -627,15 +620,6 @@ def receive_prompt():
         )
         print("Agent made")
         logger.debug("Agent created for llm_choice=%s", llm_choice)
-
-        # Prepend a strong instruction so the agent knows this is a RAG system and
-        # must call the retrieval tool for every user query.
-        try:
-            prompt_text = RAG_TOOL_ENFORCE_INSTRUCTION + "\n\n" + prompt_text
-        except Exception:
-            # If anything goes wrong prepending the instruction, continue with the original prompt
-            pass
-
         # If a target language is requested, prepend a clear instruction so the LLM
         # produces output in that language. Use a small mapping for friendly names.
         if target_language:
@@ -768,68 +752,6 @@ def set_api_key():
     set_environment_api_key(llm_choice, api_key)
     
     return jsonify({"ok": True, "message": f"API key set for {llm_choice}"})
-
-
-@rag_bp.route("/api/llm-health", methods=["GET"]) 
-def llm_health():
-    """Perform a lightweight LLM health check using the stored API key.
-
-    This endpoint attempts a tiny model call and reports whether the call
-    succeeded or failed with a quota/limit-related error. It is intended for
-    diagnosing whether API key token/quota exhaustion is affecting the app.
-    """
-    llm_choice = request.args.get("llm_choice", "gemini")
-    api_key = get_environment_api_key(llm_choice)
-    if not api_key:
-        return jsonify({"ok": False, "error": "No API key found for requested LLM.", "llm_choice": llm_choice}), 400
-
-    # Try to construct a small LLM client and invoke a trivial request.
-    try:
-        test_llm = ChatGoogleGenerativeAI(model=GEMINI_MODEL, google_api_key=api_key)
-    except Exception as e:
-        logger.exception("Failed to construct ChatGoogleGenerativeAI for health check")
-        return jsonify({"ok": False, "error": "Failed to construct LLM client", "detail": str(e)}), 500
-
-    # Perform a tiny call and capture exceptions. We use a minimal prompt to
-    # avoid consuming many tokens; the goal is to detect quota/permission errors.
-    try:
-        # Many Chat LLM wrappers accept a mapping or messages; try a few
-        # common call patterns to maximize compatibility.
-        res = None
-        tried = []
-        try:
-            tried.append("messages")
-            res = test_llm({"messages": ["LLM health check: please respond with OK"]})
-        except Exception:
-            try:
-                tried.append("__call__ str")
-                res = test_llm.__call__("LLM health check: please respond with OK")
-            except Exception:
-                try:
-                    tried.append("__call__ dict")
-                    res = test_llm.__call__({"prompt": "LLM health check: please respond with OK"})
-                except Exception as e_inner:
-                    raise e_inner
-
-        # If we got here, res may be a string, Response, or other object. Return a summary.
-        res_type = type(res).__name__ if res is not None else "None"
-        # Convert to a short repr safely
-        try:
-            rrepr = repr(res)
-            if len(rrepr) > 1000:
-                rrepr = rrepr[:1000] + "...<truncated>"
-        except Exception:
-            rrepr = "<unserializable>"
-
-        return jsonify({"ok": True, "llm_choice": llm_choice, "res_type": res_type, "res_repr": rrepr, "tried": tried})
-
-    except Exception as e:
-        # Inspect exception text for quota-like messages
-        msg = str(e)
-        quota_indicators = ["quota", "quota exceeded", "insufficient", "limit", "rate limit", "tokens", "403", "401", "permission"]
-        likely_quota = any(ind in msg.lower() for ind in quota_indicators)
-        logger.exception("LLM health check failed")
-        return jsonify({"ok": False, "error": "LLM call failed", "detail": msg, "likely_quota_issue": likely_quota}), 500
 
 
 @rag_bp.route("/api/upload-files", methods=["POST"])
