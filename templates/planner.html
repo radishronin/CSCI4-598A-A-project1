@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Campus Path Planner</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='planner.css') }}">
+  <script src="{{ url_for('static', filename='planner.js') }}" defer></script>
 </head>
 <body>
   <main class="container planner-container" role="main">
@@ -12,8 +14,8 @@
       <div class="planner-title-group">
         <h1>Campus Path Planner</h1>
         <p class="planner-intro">
-          Sketch out your efficient class route. Add your course IDs below and preview where your optimized
-          campus journey will appear once the feature is ready.
+          Plan the fastest way between your stops. Enter building codes in order and preview the optimized campus
+          route on the map.
         </p>
       </div>
       <div class="planner-actions">
@@ -23,17 +25,39 @@
     </header>
 
     <section class="planner-grid" aria-labelledby="planner-map-label">
-      <div class="planner-map" role="img" aria-labelledby="planner-map-label planner-map-caption">
-        <p id="planner-map-label" class="planner-section-label">Map Preview</p>
-        <div class="map-placeholder">
-          <span>Campus map overlay coming soon</span>
+      <div class="planner-map" aria-labelledby="planner-map-label planner-map-caption">
+        <p id="planner-map-label" class="planner-section-label">Map</p>
+        <div class="map-wrapper">
+          <img id="campus-map"
+               src="{{ url_for('planner.campus_map') }}"
+               width="{{ image.width_px }}"
+               height="{{ image.height_px }}"
+               alt="Campus map" />
+          <svg id="route-overlay"
+               class="route-overlay"
+               viewBox="0 0 {{ image.width_px }} {{ image.height_px }}"
+               preserveAspectRatio="xMidYMid meet"></svg>
         </div>
-        <p id="planner-map-caption" class="planner-caption">This area will display the campus map with your optimized path.</p>
+        <p id="planner-map-caption" class="planner-caption">
+          The map shows the shortest path between your selected buildings.
+        </p>
       </div>
+
       <form class="planner-form" aria-labelledby="planner-input-label">
-        <label id="planner-input-label" for="planner-class-input">Class List</label>
-        <textarea id="planner-class-input" name="class-list" placeholder="Enter class IDs, one per line..."></textarea>
-        <button type="button" class="btn" disabled aria-disabled="true">Generate Path (coming soon)</button>
+        <section class="building-key">
+          <h2>Available Buildings</h2>
+          <ul>
+            {% for b in buildings %}
+              <li><code>{{ b.id }}</code> – {{ b.name }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+        <label id="planner-input-label" for="planner-building-input">Building Codes (in order)</label>
+        <textarea id="planner-building-input" name="building-codes" placeholder="Example:\nBE\nBB\nGC\nCT"></textarea>
+        <div class="planner-actions-row">
+          <button type="button" class="btn" id="btn-generate-route">Generate Path</button>
+          <p class="planner-caption" id="planner-total-time" aria-live="polite"></p>
+        </div>
       </form>
     </section>
   </main>

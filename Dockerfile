@@ -26,6 +26,7 @@ COPY app.py .
 COPY templates/ ./templates/
 COPY static/ ./static/
 COPY routes/ ./routes/
+COPY resources/ ./resources/
 
 # Copy API keys and RAG documents directories
 # These will be included in the image so they persist across container instances

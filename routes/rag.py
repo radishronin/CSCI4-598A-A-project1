@@ -14,7 +14,7 @@ import pdfplumber
 from docx import Document as DocxDocument
 from pptx import Presentation
 from bs4 import BeautifulSoup
-from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template
+from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template, redirect, url_for
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -239,12 +239,8 @@ def set_environment_api_key(llm_choice: str, api_key: str):
 
 @rag_bp.route("/planner")
 def planner():
-    """Placeholder route for planner (some templates reference this)."""
-    try:
-        return render_template("planner.html")
-    except Exception:
-        # Fallback simple response if the planner template isn't present
-        return "Planner page (template missing).", 200
+    """Redirect to the dedicated planner blueprint."""
+    return redirect(url_for("planner.planner"))
 
 
 @rag_bp.route('/notes')
