@@ -3,11 +3,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const generateBtn = document.getElementById('btn-generate-route');
   const overlay = document.getElementById('route-overlay');
   const totalTimeEl = document.getElementById('planner-total-time');
+  const mapImage = document.getElementById('campus-map');
+  const mapWrapper = document.querySelector('.map-wrapper');
 
   const clearOverlay = () => {
     if (overlay) {
       overlay.innerHTML = '';
     }
+  };
+
+  const resetView = () => {
+    if (overlay) {
+      overlay.style.transform = '';
+    }
+    if (mapImage) {
+      mapImage.style.transform = '';
+    }
+  };
+
+  const getMapDimensions = () => {
+    if (!overlay || !mapImage) {
+      return null;
+    }
+
+    const viewBox = overlay.viewBox?.baseVal;
+    const width = viewBox?.width || mapImage.naturalWidth || mapImage.width;
+    const height = viewBox?.height || mapImage.naturalHeight || mapImage.height;
+
+    if (!width || !height) {
+      return null;
+    }
+
+    const displayWidth = mapWrapper?.clientWidth || mapImage.clientWidth || width;
+    const displayHeight = mapWrapper?.clientHeight || mapImage.clientHeight || height;
+
+    return { width, height, displayWidth, displayHeight };
   };
 
   const renderLeg = (leg) => {
@@ -42,11 +72,63 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.appendChild(text);
   };
 
+  const fitToPath = (legs) => {
+    const dims = getMapDimensions();
+    if (!dims || !Array.isArray(legs) || legs.length === 0) {
+      resetView();
+      return;
+    }
+
+    const allPoints = legs.flatMap((leg) => leg.polyline || []);
+    if (!allPoints.length) {
+      resetView();
+      return;
+    }
+
+    const xs = allPoints.map((p) => p.x);
+    const ys = allPoints.map((p) => p.y);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const pathWidth = Math.max(maxX - minX, 1);
+    const pathHeight = Math.max(maxY - minY, 1);
+    const longest = Math.max(pathWidth, pathHeight);
+    const padding = longest; // +100% of the longest dimension total
+
+    const targetMinX = Math.max(0, minX - padding / 2);
+    const targetMaxX = Math.min(dims.width, maxX + padding / 2);
+    const targetMinY = Math.max(0, minY - padding / 2);
+    const targetMaxY = Math.min(dims.height, maxY + padding / 2);
+
+    const targetWidth = Math.max(targetMaxX - targetMinX, 1);
+    const targetHeight = Math.max(targetMaxY - targetMinY, 1);
+
+    const scaleX = dims.displayWidth / targetWidth;
+    const scaleY = dims.displayHeight / targetHeight;
+    const scale = Math.min(scaleX, scaleY);
+
+    const offsetX = (dims.displayWidth - targetWidth * scale) / 2 - targetMinX * scale;
+    const offsetY = (dims.displayHeight - targetHeight * scale) / 2 - targetMinY * scale;
+
+    const transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+
+    if (overlay) {
+      overlay.style.transform = transform;
+    }
+    if (mapImage) {
+      mapImage.style.transform = transform;
+    }
+  };
+
   const showError = (message) => {
     if (totalTimeEl) {
       totalTimeEl.textContent = message;
     }
     clearOverlay();
+    resetView();
   };
 
   const handleGenerate = async () => {
@@ -86,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (Array.isArray(data.legs)) {
         data.legs.forEach(renderLeg);
+        fitToPath(data.legs);
       }
 
       if (totalTimeEl && typeof data.total_time_s === 'number') {
