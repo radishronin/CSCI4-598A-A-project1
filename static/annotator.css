@@ -57,16 +57,14 @@
 .annotator-placeholder {
   flex: 1;
   min-height: 0;
-  border: 2px dashed #cbd5e0;
-  border-radius: 0.75rem;
-  padding: 2rem;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: #718096;
-  background: #ffffff;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  align-items: stretch;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 /* Core annotator tool styling (your dark UI) */
@@ -90,16 +88,20 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 #top-bar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.8rem;
+  padding: 0.6rem 0.9rem;
   background: #2a2d30;
   border-bottom: 1px solid #444;
   font-size: 0.9rem;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 #top-bar button {
