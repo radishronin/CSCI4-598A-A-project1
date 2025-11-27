@@ -75,6 +75,7 @@ def _build_adjacency(graph: dict) -> Dict[str, List[Tuple[str, float]]]:
         if from_node not in adjacency or to_node not in adjacency:
             continue
         adjacency[from_node].append((to_node, travel_time))
+        adjacency[to_node].append((from_node, travel_time))
 
     return adjacency
 
