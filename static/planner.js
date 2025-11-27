@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const totalTimeEl = document.getElementById('planner-total-time');
   const mapImage = document.getElementById('campus-map');
   const mapWrapper = document.querySelector('.map-wrapper');
+  const mapCanvas = document.querySelector('.map-canvas');
 
   const clearOverlay = () => {
     if (overlay) {
@@ -13,11 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const resetView = () => {
-    if (overlay) {
-      overlay.style.transform = '';
-    }
-    if (mapImage) {
-      mapImage.style.transform = '';
+    if (mapCanvas) {
+      mapCanvas.style.transform = '';
     }
   };
 
@@ -34,8 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return null;
     }
 
-    const displayWidth = mapWrapper?.clientWidth || mapImage.clientWidth || width;
-    const displayHeight = mapWrapper?.clientHeight || mapImage.clientHeight || height;
+    const displayWidth = mapCanvas?.clientWidth || mapWrapper?.clientWidth || mapImage.clientWidth || width;
+    const displayHeight = mapCanvas?.clientHeight || mapWrapper?.clientHeight || mapImage.clientHeight || height;
 
     return { width, height, displayWidth, displayHeight };
   };
@@ -115,11 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 
-    if (overlay) {
-      overlay.style.transform = transform;
-    }
-    if (mapImage) {
-      mapImage.style.transform = transform;
+    if (mapCanvas) {
+      mapCanvas.style.transform = transform;
     }
   };
 
