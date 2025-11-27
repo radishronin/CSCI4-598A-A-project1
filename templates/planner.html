@@ -16,7 +16,10 @@
           campus journey will appear once the feature is ready.
         </p>
       </div>
-      <a class="btn secondary" href="{{ url_for('rag.rag') }}">Back to RAG Assistant</a>
+      <div class="planner-actions">
+        <a class="btn secondary" href="{{ url_for('planner.annotator') }}">Use Custom Map Annotator</a>
+        <a class="btn secondary" href="{{ url_for('rag.rag') }}">Back to RAG Assistant</a>
+      </div>
     </header>
 
     <section class="planner-grid" aria-labelledby="planner-map-label">

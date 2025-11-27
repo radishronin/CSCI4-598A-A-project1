@@ -1,0 +1,30 @@
+/* Placeholder styles for the annotator page. Customize as needed. */
+
+.annotator-container {
+  padding: 2rem 1.5rem;
+}
+
+.annotator-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.annotator-title-group h1 {
+  margin: 0;
+}
+
+.annotator-title-group p {
+  margin: 0.25rem 0 0;
+  color: #4a5568;
+}
+
+.annotator-placeholder {
+  border: 2px dashed #cbd5e0;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  color: #718096;
+}
