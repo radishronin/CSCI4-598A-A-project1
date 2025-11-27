@@ -14,6 +14,8 @@ import pdfplumber
 from docx import Document as DocxDocument
 from pptx import Presentation
 from bs4 import BeautifulSoup
+import urllib.request
+import urllib.error
 from flask import Blueprint, Response, jsonify, request, stream_with_context, render_template, redirect, url_for
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
@@ -1007,3 +1009,94 @@ def upload_files():
         vector_index.storage_context.persist(Path(index_dir))
     
     return jsonify({"ok": True, "message": f"Received {len(files)} file(s)"})
+
+
+@rag_bp.route("/api/scrape", methods=["POST"])
+def scrape_url():
+    """Fetch a URL, extract visible text, and optionally insert into the RAG index.
+
+    POST JSON parameters:
+    - url: string (required) - http(s) URL to fetch
+    - insert: bool (optional) - if true, insert extracted content into vector index
+    - llm_choice: string (required if insert=true) - which LLM/index to insert into
+    """
+    data = request.get_json(silent=True) or {}
+    url = (data.get("url") or "").strip()
+    insert = bool(data.get("insert", False))
+    llm_choice = data.get("llm_choice", "")
+
+    if not url:
+        return jsonify({"ok": False, "error": "No URL provided."}), 400
+
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return jsonify({"ok": False, "error": "Only http:// and https:// URLs are supported."}), 400
+
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "vibe-scraper/1.0 (+https://example.local)"
+        })
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read()
+            # Try to decode using detected encoding or utf-8 fallback
+            try:
+                charset = resp.headers.get_content_charset() or "utf-8"
+            except Exception:
+                charset = "utf-8"
+            try:
+                html = raw.decode(charset, errors="replace")
+            except Exception:
+                html = raw.decode("utf-8", errors="replace")
+
+    except urllib.error.HTTPError as e:
+        logger.exception("HTTP error fetching %s", url)
+        return jsonify({"ok": False, "error": f"HTTP error: {e.code} fetching URL."}), 502
+    except urllib.error.URLError as e:
+        logger.exception("URL error fetching %s", url)
+        return jsonify({"ok": False, "error": f"URL fetch failed: {e.reason}"}), 502
+    except Exception as e:
+        logger.exception("Unexpected error fetching %s", url)
+        return jsonify({"ok": False, "error": "Failed to fetch URL."}), 502
+
+    try:
+        soup = BeautifulSoup(html, "lxml")
+        for s in soup(["script", "style", "noscript"]):
+            s.extract()
+        text = soup.get_text(separator="\n", strip=True)
+    except Exception:
+        logger.exception("Failed to parse HTML for %s", url)
+        return jsonify({"ok": False, "error": "Failed to parse HTML."}), 500
+
+    inserted = False
+    if insert:
+        if not llm_choice:
+            return jsonify({"ok": False, "error": "llm_choice required when insert=true"}), 400
+
+        # Ensure embedding model initialized for this LLM
+        global is_first_embed_run
+        if is_first_embed_run == 1:
+            initialize_embedding_model(llm_choice)
+            is_first_embed_run = 0
+
+        vector_index = get_vector_index(llm_choice)
+        if vector_index is None:
+            return jsonify({"ok": False, "error": "Unable to create or load index for insertion."}), 500
+
+        try:
+            doc = Document(text=text, metadata={"source_url": url})
+            splitter = SentenceSplitter(chunk_size=1200, chunk_overlap=200)
+            nodes = splitter.get_nodes_from_documents([doc])
+            logger.info("Inserting %d nodes from scraped URL %s into index %s", len(nodes), url, llm_choice)
+            vector_index.insert_nodes(nodes)
+            # Persist per-LLM index directory
+            index_dir = os.path.join(INDEX_PATH, llm_choice)
+            os.makedirs(index_dir, exist_ok=True)
+            vector_index.storage_context.persist(Path(index_dir))
+            inserted = True
+        except Exception:
+            logger.exception("Failed to insert scraped content into index for %s", url)
+            return jsonify({"ok": False, "error": "Failed to insert into index."}), 500
+
+    # Return the extracted text (possibly truncated) and insertion status
+    max_return = 20000
+    short = text if len(text) <= max_return else text[:max_return] + "\n\n...[truncated]..."
+    return jsonify({"ok": True, "url": url, "text": short, "inserted": inserted})
