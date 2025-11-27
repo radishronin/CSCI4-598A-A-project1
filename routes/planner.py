@@ -7,3 +7,9 @@ planner_bp = Blueprint("planner", __name__, url_prefix = "/planner")
 def planner():
     """Render the planner template."""
     return render_template("planner.html")
+
+
+@planner_bp.route("/annotator")
+def annotator():
+    """Render the annotator template."""
+    return render_template("annotator.html")

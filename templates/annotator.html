@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Graph Annotator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='annotator.css') }}">
+  <script src="{{ url_for('static', filename='annotator.js') }}" defer></script>
+</head>
+<body>
+  <main class="container annotator-container" role="main">
+    <header class="annotator-header">
+      <a href="{{ url_for('planner.planner') }}" class="btn secondary back-button">← Back to Planner</a>
+      <div class="annotator-title-group">
+        <h1>Campus Graph Annotator</h1>
+        <p class="annotator-intro">Prepare custom map overlays and annotations for your campus routes.</p>
+      </div>
+    </header>
+
+    <section class="annotator-content" aria-labelledby="annotator-root">
+      <main id="annotator-root" class="annotator-placeholder">
+        <!-- Annotator tool will be embedded here. -->
+        <p>Annotator tool will go here.</p>
+      </main>
+    </section>
+  </main>
+</body>
+</html>
