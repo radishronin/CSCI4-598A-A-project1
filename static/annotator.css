@@ -99,7 +99,7 @@ body {
   border-bottom: 1px solid #444;
   font-size: 0.9rem;
   position: sticky;
-  top: var(--annotator-header-height);
+  top: 0;
   z-index: 5;
 }
 
