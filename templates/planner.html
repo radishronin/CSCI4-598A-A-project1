@@ -75,6 +75,22 @@
               <option value="direct">Direct (localized)</option>
               <option value="both">Both (original + translated)</option>
             </select>
+            
+            <label id="planner-llm-label">Select LLM</label>
+            <div class="llm-options">
+              <label class="radio-option">
+                <input type="radio" name="planner-llm-choice" value="gemini">
+                <span>Gemini</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="planner-llm-choice" value="openai">
+                <span>OpenAI</span>
+              </label>
+            </div>
+            <div class="actions">
+              <button id="planner-set-llm-button" type="button" class="btn secondary">Set LLM</button>
+              <span id="planner-current-llm-indicator" style="margin-left:12px; font-weight:600;"></span>
+            </div>
           </div>
           <button type="button" class="btn" id="btn-generate-route">Generate Path</button>
           <p class="planner-caption" id="planner-total-time" aria-live="polite"></p>

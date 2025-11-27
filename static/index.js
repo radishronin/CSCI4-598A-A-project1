@@ -2,6 +2,7 @@
   const textarea = document.getElementById('prompt-input');
   const button = document.getElementById('enter-button');
 
+  let currentLLMChoice = '';
   let currentPrompt = '';
 
   function setOutput(text) {
@@ -40,14 +41,22 @@
 
   async function submitPrompt() {
     const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
-    const targetLanguage = document.getElementById('language-select')?.value || 'en';
-    const responseMode = document.getElementById('mode-select')?.value || 'direct';
+  // Prefer checked radio; fallback to stored selection
+  const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value || localStorage.getItem('selected_llm');
+  const targetLanguage = document.getElementById('language-select')?.value || 'en';
+  const responseMode = document.getElementById('mode-select')?.value || 'direct';
+
+    if (!llmChoice) {
+      alert('Please select an LLM.');
+      return;
+    }
 
     if (!value) {
       alert('Please input something.')
       return;
     }
     
+    currentLLMChoice = llmChoice;
     currentPrompt = value;
 
     // Clear output and show spinner
@@ -55,11 +64,12 @@
     showSpinner();
     
     try {
-      const res = await fetch('/rag/api/prompt', {
+      const res = await fetch('/api/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: value, 
+          llm_choice: llmChoice, 
           target_language: targetLanguage,
           response_mode: responseMode
         })
@@ -72,7 +82,7 @@
         const payload = await res.json();
         if (payload && payload.error === 'NO API key set.') {
           hideSpinner();
-          showApiKeyModal("gemini");
+          showApiKeyModal(llmChoice);
           document.getElementById('prompt-input').value = '';
           return;
         }
@@ -111,6 +121,26 @@
     document.getElementById('prompt-input').value = '';
   }
 
+  // Initialize LLM indicator from localStorage and wire Set LLM button
+  (function initLlmSetter(){
+    const indicator = document.getElementById('current-llm-indicator');
+    const stored = localStorage.getItem('selected_llm');
+    if (stored && indicator) indicator.textContent = stored.toUpperCase();
+
+    const setBtn = document.getElementById('set-llm-button');
+    if (setBtn) {
+      setBtn.addEventListener('click', () => {
+        const sel = document.querySelector('input[name="llm-choice"]:checked')?.value;
+        if (!sel) {
+          alert('Please select an LLM to set.');
+          return;
+        }
+        localStorage.setItem('selected_llm', sel);
+        if (indicator) indicator.textContent = sel.toUpperCase();
+      });
+    }
+  })();
+
   function showApiKeyModal(llmChoice) {
     const modal = document.getElementById('api-key-modal');
     const message = document.getElementById('api-key-message');
@@ -136,11 +166,11 @@
     }
     
     try {
-      const response = await fetch('/rag/api/set-api-key', {
+      const response = await fetch('/api/set-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          llm_choice: "gemini", 
+          llm_choice: currentLLMChoice, 
           api_key: apiKey 
         })
       });
@@ -290,6 +320,14 @@
   loadNotes();
 
   async function handleFileSelection(event) {
+    const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
+
+    if (!llmChoice) {
+      alert('Please select an LLM.');
+      fileInput.value = '';
+      return;
+    }
+
     const files = event.target.files;
 
     if (files.length === 0) {
@@ -327,10 +365,10 @@
     await Promise.all(fileReadPromises);
 
     try {
-      const response = await fetch('/rag/api/upload-files', {
+      const response = await fetch('/api/upload-files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_paths: filePaths })
+        body: JSON.stringify({ file_paths: filePaths, llmChoice : llmChoice })
       });
       
       const result = await response.json();
