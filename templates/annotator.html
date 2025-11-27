@@ -20,8 +20,191 @@
 
     <section class="annotator-content" aria-labelledby="annotator-root">
       <main id="annotator-root" class="annotator-placeholder">
-        <!-- Annotator tool will be embedded here. -->
-        <p>Annotator tool will go here.</p>
+        <div id="app">
+          <header id="top-bar">
+            <button id="btn-load-image">Load Image</button>
+            <input type="file" id="input-image" accept="image/png,image/jpeg" style="display:none">
+
+            <button id="btn-import-json">Import JSON</button>
+            <input type="file" id="input-json" accept="application/json" style="display:none">
+
+            <button id="btn-export-json">Export JSON</button>
+            <button id="btn-clear">Clear</button>
+            <button id="btn-calibration-tool">Calibration Tool</button>
+            <button id="btn-help">Help</button>
+
+            <span id="top-bar-status"></span>
+          </header>
+
+          <div id="main-layout">
+            <!-- Left tools panel -->
+            <aside id="left-panel">
+              <h2>Tools</h2>
+              <div class="tool-group">
+                <button class="tool-button active" data-tool="select" id="tool-select">Pan / Select (V)</button>
+                <button class="tool-button" data-tool="add-node" id="tool-add-node">Add Node (N)</button>
+                <button class="tool-button" data-tool="add-edge" id="tool-add-edge">Add Edge (E)</button>
+                <button class="tool-button" data-tool="delete" id="tool-delete">Delete (Del)</button>
+                <button class="tool-button" data-tool="toggle-flags" id="tool-toggle-flags">Toggle Edge Flags (T)</button>
+                <button class="tool-button" data-tool="building-assign" id="tool-building-assign">Building Assign (B)</button>
+              </div>
+
+              <div class="section">
+                <h3>Global Settings</h3>
+                <label>
+                  px / meter:
+                  <input type="number" id="input-px-per-meter" step="0.01">
+                </label>
+                <label>
+                  Walking speed (m/s):
+                  <input type="number" id="input-walking-speed" step="0.1">
+                </label>
+                <label>
+                  Penalty (stairs, s):
+                  <input type="number" id="input-penalty-stairs" step="1">
+                </label>
+                <label>
+                  Penalty (steep, s):
+                  <input type="number" id="input-penalty-steep" step="1">
+                </label>
+                <label>
+                  Penalty (covered, s):
+                  <input type="number" id="input-penalty-covered" step="1">
+                </label>
+              </div>
+            </aside>
+
+            <!-- Center canvas -->
+            <section id="center-panel">
+              <div id="canvas-container">
+                <canvas id="map-canvas"></canvas>
+                <div id="hover-tooltip" class="tooltip hidden"></div>
+              </div>
+            </section>
+
+            <!-- Right inspector / lists -->
+            <aside id="right-panel">
+              <h2>Inspector</h2>
+              <div id="no-selection">No selection.</div>
+
+              <div id="node-inspector" class="inspector-section hidden">
+                <h3>Node</h3>
+                <div><strong id="node-id"></strong></div>
+                <label>
+                  Name:
+                  <input type="text" id="node-name">
+                </label>
+                <label>
+                  Type:
+                  <select id="node-type">
+                    <option value="intersection">intersection</option>
+                    <option value="entrance">entrance</option>
+                    <option value="other">other</option>
+                  </select>
+                </label>
+                <label>
+                  Building ID:
+                  <input type="text" id="node-building-id">
+                </label>
+                <label>
+                  Entrance:
+                  <input type="checkbox" id="node-entrance">
+                </label>
+                <div>Position: <span id="node-pos"></span></div>
+              </div>
+
+              <div id="edge-inspector" class="inspector-section hidden">
+                <h3>Edge</h3>
+                <div><strong id="edge-id"></strong></div>
+                <div>From: <span id="edge-from"></span></div>
+                <div>To: <span id="edge-to"></span></div>
+                <div>Length px: <span id="edge-length-px"></span></div>
+                <div>Length m: <span id="edge-length-m"></span></div>
+                <label>
+                  Accessible:
+                  <input type="checkbox" id="edge-flag-accessible">
+                </label>
+                <label>
+                  Stairs:
+                  <input type="checkbox" id="edge-flag-stairs">
+                </label>
+                <label>
+                  Covered:
+                  <input type="checkbox" id="edge-flag-covered">
+                </label>
+                <label>
+                  Blocked:
+                  <input type="checkbox" id="edge-flag-blocked">
+                </label>
+                <label>
+                  Penalty (s):
+                  <input type="number" id="edge-penalty" step="1">
+                </label>
+              </div>
+
+              <div id="building-inspector" class="inspector-section">
+                <h3>Buildings</h3>
+                <label>
+                  New building ID:
+                  <input type="text" id="building-new-id" placeholder="b1">
+                </label>
+                <label>
+                  New building name:
+                  <input type="text" id="building-new-name" placeholder="Mines Hall">
+                </label>
+                <button id="btn-add-building">Add Building</button>
+
+                <div id="building-list"></div>
+
+                <!-- New: selected building editor -->
+                <div id="building-edit" class="hidden">
+                  <hr>
+                  <div>Selected building: <span id="building-selected-id"></span></div>
+                  <label>
+                    Building name:
+                    <input type="text" id="building-edit-name">
+                  </label>
+                  <label>
+                    Building ID:
+                    <input type="text" id="building-edit-id">
+                  </label>
+                  <button id="btn-update-building">Update Building</button>
+                  <button id="btn-delete-building">Delete Building</button>
+                  <div id="building-edit-info" class="small-note"></div>
+                </div>
+              </div>
+
+
+              <div class="inspector-section">
+                <h3>Lists</h3>
+                <details open>
+                  <summary>Nodes</summary>
+                  <input type="text" id="filter-nodes" placeholder="Filter nodes">
+                  <div id="node-list" class="scroll-list"></div>
+                </details>
+                <details>
+                  <summary>Edges</summary>
+                  <input type="text" id="filter-edges" placeholder="Filter edges">
+                  <div id="edge-list" class="scroll-list"></div>
+                </details>
+              </div>
+
+              <div class="inspector-section">
+                <h3>Stats</h3>
+                <div>Nodes: <span id="stat-nodes">0</span></div>
+                <div>Edges: <span id="stat-edges">0</span></div>
+                <div>Entrances: <span id="stat-entrances">0</span></div>
+                <div>Blocked edges: <span id="stat-blocked-edges">0</span></div>
+              </div>
+            </aside>
+          </div>
+
+          <footer id="status-bar">
+            <span id="status-zoom">Zoom: 100%</span>
+            <span id="status-coords">Coords: - , -</span>
+            <span id="status-selection"></span>
+          </footer>
+        </div>
       </main>
     </section>
   </main>
