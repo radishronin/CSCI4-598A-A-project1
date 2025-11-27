@@ -13,6 +13,7 @@
   width: 100%;
   margin: 0;
   padding: 0;
+  /* padding-top: var(--annotator-header-height);  Removed to avoid double spacing with sticky toolbar offset. */
   border-radius: 0;
   box-shadow: none;
   min-height: 100vh;
@@ -99,7 +100,7 @@ body {
   border-bottom: 1px solid #444;
   font-size: 0.9rem;
   position: sticky;
-  top: 0;
+  top: var(--annotator-header-height);
   z-index: 5;
 }
 
