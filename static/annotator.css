@@ -1,15 +1,49 @@
-/* Placeholder styles for the annotator page. Customize as needed. */
+/* Layout for the dedicated annotator experience */
+
+.annotator-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fb;
+}
 
 .annotator-container {
-  padding: 2rem 1.5rem;
+  --annotator-header-height: 96px;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 100vh;
+  height: 100vh;
+  padding-top: var(--annotator-header-height);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
 }
 
 .annotator-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  height: var(--annotator-header-height);
+  box-sizing: border-box;
+}
+
+.annotator-title-group {
+  flex: 1;
+  min-width: 0;
 }
 
 .annotator-title-group h1 {
@@ -21,10 +55,25 @@
   color: #4a5568;
 }
 
+.annotator-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 1.5rem;
+  overflow: auto;
+}
+
 .annotator-placeholder {
+  flex: 1;
+  min-height: 0;
   border: 2px dashed #cbd5e0;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #718096;
+  background: #ffffff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
 }
