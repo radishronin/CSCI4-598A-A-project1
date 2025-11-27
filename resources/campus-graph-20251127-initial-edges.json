@@ -1,0 +1,1002 @@
+{
+  "version": "campus-graph-v1",
+  "image": {
+    "filename": "campus-map.png",
+    "width_px": 1600,
+    "height_px": 1600
+  },
+  "settings": {
+    "px_per_meter": 3.2,
+    "walking_speed_mps": 1.4,
+    "penalties": {
+      "stairs_s": 20,
+      "steep_s": 15,
+      "covered_s": -5
+    }
+  },
+  "nodes": [
+    {
+      "id": "n1",
+      "x": 726.9630300735338,
+      "y": 944.0794443318648,
+      "name": "BE-entrance-West",
+      "type": "entrance",
+      "buildingId": "BE",
+      "entrance": true
+    },
+    {
+      "id": "n2",
+      "x": 776.4770267670211,
+      "y": 928.9058001838606,
+      "name": "BE-entrance-north",
+      "type": "entrance",
+      "buildingId": "BE",
+      "entrance": true
+    },
+    {
+      "id": "n3",
+      "x": 823.5951849108237,
+      "y": 944.8780571817598,
+      "name": "BE-entrance-west",
+      "type": "entrance",
+      "buildingId": "BE",
+      "entrance": true
+    },
+    {
+      "id": "n4",
+      "x": 873.907794454206,
+      "y": 936.8919286828102,
+      "name": "CK-entrance-west",
+      "type": "entrance",
+      "buildingId": "CK",
+      "entrance": true
+    },
+    {
+      "id": "n5",
+      "x": 972.9357878411807,
+      "y": 940.0863800823901,
+      "name": "CK-entrance-east",
+      "type": "entrance",
+      "buildingId": "CK",
+      "entrance": true
+    },
+    {
+      "id": "n6",
+      "x": 1004.0816889870841,
+      "y": 868.2112235918439,
+      "name": "GC-entrance-north",
+      "type": "entrance",
+      "buildingId": "GC",
+      "entrance": true
+    },
+    {
+      "id": "n7",
+      "x": 1004.880301836979,
+      "y": 953.6627985306044,
+      "name": "GC-entrance-south",
+      "type": "entrance",
+      "buildingId": "GC",
+      "entrance": true
+    },
+    {
+      "id": "n8",
+      "x": 1028.8386873338277,
+      "y": 799.5305185008775,
+      "name": "HH-entrance",
+      "type": "entrance",
+      "buildingId": "HH",
+      "entrance": true
+    },
+    {
+      "id": "n9",
+      "x": 906.6509212998993,
+      "y": 1015.9546008224111,
+      "name": "AH-entrance",
+      "type": "entrance",
+      "buildingId": "AH",
+      "entrance": true
+    },
+    {
+      "id": "n10",
+      "x": 739.7408356718531,
+      "y": 1008.7670851733565,
+      "name": "BB-entrance-north-west",
+      "type": "entrance",
+      "buildingId": "BB",
+      "entrance": true
+    },
+    {
+      "id": "n11",
+      "x": 835.5743776592481,
+      "y": 1023.1421164714657,
+      "name": "BB-entrance-north-east",
+      "type": "entrance",
+      "buildingId": "BB",
+      "entrance": true
+    },
+    {
+      "id": "n12",
+      "x": 835.5743776592481,
+      "y": 1085.4339187632725,
+      "name": "BB-entrance-south-east",
+      "type": "entrance",
+      "buildingId": "BB",
+      "entrance": true
+    },
+    {
+      "id": "n13",
+      "x": 758.9075440693321,
+      "y": 1106.9964657104363,
+      "name": "BB-entrance-south-west",
+      "type": "entrance",
+      "buildingId": "BB",
+      "entrance": true
+    },
+    {
+      "id": "n14",
+      "x": 858.7341503062019,
+      "y": 744.4262318581254,
+      "name": "CH-entrance",
+      "type": "entrance",
+      "buildingId": "CH",
+      "entrance": true
+    },
+    {
+      "id": "n15",
+      "x": 897.8661799510547,
+      "y": 685.3288809658985,
+      "name": "CO-entrance",
+      "type": "entrance",
+      "buildingId": "CO",
+      "entrance": true
+    },
+    {
+      "id": "n16",
+      "x": 1009.6719789363489,
+      "y": 1069.4616617653733,
+      "name": "CTLM-entrance",
+      "type": "entrance",
+      "buildingId": "CT",
+      "entrance": true
+    },
+    {
+      "id": "n17",
+      "x": 790.3280146119212,
+      "y": 846.5316974239158,
+      "name": "GH-entrance-east",
+      "type": "entrance",
+      "buildingId": "GH",
+      "entrance": true
+    },
+    {
+      "id": "n18",
+      "x": 763.5621751405725,
+      "y": 850.2235373509984,
+      "name": "GH-entrance-west",
+      "type": "entrance",
+      "buildingId": "GH",
+      "entrance": true
+    },
+    {
+      "id": "n20",
+      "x": 1096.7507285597737,
+      "y": 1054.19769332231,
+      "name": "MZ-entrance-south",
+      "type": "entrance",
+      "buildingId": "MZ",
+      "entrance": false
+    },
+    {
+      "id": "n21",
+      "x": 992.4562506196913,
+      "y": 1007.1267342520074,
+      "name": "MZ-entrance-west",
+      "type": "entrance",
+      "buildingId": "MZ",
+      "entrance": false
+    },
+    {
+      "id": "n22",
+      "x": 851.7676786133475,
+      "y": 833.1320801970902,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n23",
+      "x": 854.7840022534433,
+      "y": 859.2735517445874,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n24",
+      "x": 983.2325737966893,
+      "y": 833.9905609359045,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n25",
+      "x": 983.2325737966893,
+      "y": 860.6333030463727,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n26",
+      "x": 985.2061102493166,
+      "y": 955.8564368856387,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n27",
+      "x": 974.3516597598666,
+      "y": 992.3668612592433,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n28",
+      "x": 907.2514203705392,
+      "y": 992.8602453724001,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n29",
+      "x": 854.9527043759165,
+      "y": 991.8734771460864,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n30",
+      "x": 854.0316540027828,
+      "y": 1126.3685792057154,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n31",
+      "x": 735.3625456346319,
+      "y": 1128.6728337371358,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n32",
+      "x": 1053.349670970648,
+      "y": 1060.6973250602337,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n33",
+      "x": 850.5752722056523,
+      "y": 709.2985090186216,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n34",
+      "x": 734.8197517790901,
+      "y": 982.9640776067263,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n35",
+      "x": 834.667914400387,
+      "y": 916.2313860055581,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    },
+    {
+      "id": "n36",
+      "x": 778.9737131392616,
+      "y": 895.1579044472944,
+      "name": "",
+      "type": "intersection",
+      "buildingId": null,
+      "entrance": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "n15",
+      "to": "n33",
+      "length_px": 53.018610170109696,
+      "length_m": 16.56831567815928,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e2",
+      "from": "n33",
+      "to": "n14",
+      "length_px": 36.06278142002673,
+      "length_m": 11.269619193758352,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e3",
+      "from": "n14",
+      "to": "n22",
+      "length_px": 88.9789821102869,
+      "length_m": 27.805931909464658,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e4",
+      "from": "n22",
+      "to": "n23",
+      "length_px": 26.314914838745082,
+      "length_m": 8.223410887107837,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e5",
+      "from": "n22",
+      "to": "n24",
+      "length_px": 131.4676981419617,
+      "length_m": 41.08365566936303,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e6",
+      "from": "n24",
+      "to": "n8",
+      "length_px": 57.161281621270675,
+      "length_m": 17.862900506647083,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e7",
+      "from": "n25",
+      "to": "n6",
+      "length_px": 22.18356337507183,
+      "length_m": 6.932363554709947,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e8",
+      "from": "n25",
+      "to": "n23",
+      "length_px": 128.45576847733653,
+      "length_m": 40.142427649167665,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e9",
+      "from": "n25",
+      "to": "n26",
+      "length_px": 95.2435827985309,
+      "length_m": 29.763619624540905,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e10",
+      "from": "n25",
+      "to": "n24",
+      "length_px": 26.642742110468248,
+      "length_m": 8.325856909521328,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e11",
+      "from": "n26",
+      "to": "n5",
+      "length_px": 19.98137892081746,
+      "length_m": 6.244180912755455,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e12",
+      "from": "n26",
+      "to": "n7",
+      "length_px": 19.796107290594417,
+      "length_m": 6.186283528310755,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e13",
+      "from": "n26",
+      "to": "n21",
+      "length_px": 51.78038168482357,
+      "length_m": 16.181369276507365,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e14",
+      "from": "n26",
+      "to": "n27",
+      "length_px": 38.08976481114866,
+      "length_m": 11.903051503483956,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e15",
+      "from": "n27",
+      "to": "n28",
+      "length_px": 67.10205327699114,
+      "length_m": 20.96939164905973,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e16",
+      "from": "n28",
+      "to": "n29",
+      "length_px": 52.308024300471054,
+      "length_m": 16.346257593897203,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e17",
+      "from": "n28",
+      "to": "n9",
+      "length_px": 23.10216121459834,
+      "length_m": 7.219425379561981,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e18",
+      "from": "n29",
+      "to": "n4",
+      "length_px": 58.15725329909988,
+      "length_m": 18.17414165596871,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e19",
+      "from": "n23",
+      "to": "n29",
+      "length_px": 132.60003271828117,
+      "length_m": 41.43751022446286,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e20",
+      "from": "n29",
+      "to": "n35",
+      "length_px": 78.31474099084629,
+      "length_m": 24.473356559639463,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e21",
+      "from": "n35",
+      "to": "n3",
+      "length_px": 30.712165469508495,
+      "length_m": 9.597551709221404,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e22",
+      "from": "n35",
+      "to": "n36",
+      "length_px": 59.54775964804402,
+      "length_m": 18.608674890013756,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e23",
+      "from": "n36",
+      "to": "n2",
+      "length_px": 33.84012277589243,
+      "length_m": 10.575038367466384,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e24",
+      "from": "n36",
+      "to": "n18",
+      "length_px": 47.50381931834244,
+      "length_m": 14.844943536982012,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e25",
+      "from": "n29",
+      "to": "n34",
+      "length_px": 120.46287270268498,
+      "length_m": 37.64464771958905,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e26",
+      "from": "n34",
+      "to": "n1",
+      "length_px": 39.67042703172004,
+      "length_m": 12.397008447412512,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e27",
+      "from": "n36",
+      "to": "n17",
+      "length_px": 49.934238468334655,
+      "length_m": 15.60444952135458,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e28",
+      "from": "n23",
+      "to": "n17",
+      "length_px": 65.70334233791515,
+      "length_m": 20.53229448059848,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e29",
+      "from": "n22",
+      "to": "n17",
+      "length_px": 62.88387753974465,
+      "length_m": 19.651211731170203,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e30",
+      "from": "n34",
+      "to": "n10",
+      "length_px": 26.2680845545157,
+      "length_m": 8.208776423286155,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e31",
+      "from": "n29",
+      "to": "n11",
+      "length_px": 36.786510456940576,
+      "length_m": 11.495784517793929,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e32",
+      "from": "n12",
+      "to": "n11",
+      "length_px": 62.29180229180679,
+      "length_m": 19.46618821618962,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e33",
+      "from": "n12",
+      "to": "n13",
+      "length_px": 79.6413636469926,
+      "length_m": 24.887926139685188,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e34",
+      "from": "n31",
+      "to": "n13",
+      "length_px": 32.003622953018166,
+      "length_m": 10.001132172818176,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e35",
+      "from": "n31",
+      "to": "n30",
+      "length_px": 118.69147766304668,
+      "length_m": 37.09108676970209,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e36",
+      "from": "n30",
+      "to": "n12",
+      "length_px": 44.90342387346102,
+      "length_m": 14.032319960456569,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e37",
+      "from": "n27",
+      "to": "n21",
+      "length_px": 23.358725585189305,
+      "length_m": 7.299601745371658,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e38",
+      "from": "n27",
+      "to": "n32",
+      "length_px": 104.44969151949282,
+      "length_m": 32.6405285998415,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e39",
+      "from": "n32",
+      "to": "n16",
+      "length_px": 44.5483375596008,
+      "length_m": 13.92135548737525,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    },
+    {
+      "id": "e40",
+      "from": "n32",
+      "to": "n20",
+      "length_px": 43.885043153484865,
+      "length_m": 13.714075985464019,
+      "flags": {
+        "accessible": true,
+        "stairs": false,
+        "covered": false,
+        "blocked": false
+      },
+      "penalty_s": 0
+    }
+  ],
+  "buildings": [
+    {
+      "id": "BE",
+      "name": "Berthoud Hall",
+      "entranceNodeIds": [
+        "n1",
+        "n2",
+        "n3"
+      ],
+      "courses": []
+    },
+    {
+      "id": "CK",
+      "name": "CoorsTek Center",
+      "entranceNodeIds": [
+        "n4",
+        "n5"
+      ],
+      "courses": []
+    },
+    {
+      "id": "GC",
+      "name": "Green Center",
+      "entranceNodeIds": [
+        "n6",
+        "n7"
+      ],
+      "courses": []
+    },
+    {
+      "id": "HH",
+      "name": "Hill Hall",
+      "entranceNodeIds": [
+        "n8"
+      ],
+      "courses": []
+    },
+    {
+      "id": "AH",
+      "name": "Alderson Hall",
+      "entranceNodeIds": [
+        "n9"
+      ],
+      "courses": []
+    },
+    {
+      "id": "BB",
+      "name": "Brown Hall",
+      "entranceNodeIds": [
+        "n10",
+        "n11",
+        "n12",
+        "n13"
+      ],
+      "courses": []
+    },
+    {
+      "id": "CH",
+      "name": "Chauvenet Hall",
+      "entranceNodeIds": [
+        "n14"
+      ],
+      "courses": []
+    },
+    {
+      "id": "CO",
+      "name": "Coolbaugh Hall",
+      "entranceNodeIds": [
+        "n15"
+      ],
+      "courses": []
+    },
+    {
+      "id": "CT",
+      "name": "CTLM",
+      "entranceNodeIds": [
+        "n16"
+      ],
+      "courses": []
+    },
+    {
+      "id": "GH",
+      "name": "Guggenheim Hall",
+      "entranceNodeIds": [
+        "n17",
+        "n18"
+      ],
+      "courses": []
+    },
+    {
+      "id": "MZ",
+      "name": "Marquez Hall",
+      "entranceNodeIds": [
+        "n20",
+        "n21"
+      ],
+      "courses": []
+    }
+  ],
+  "overrides": {
+    "blockedEdgeIds": []
+  },
+  "meta": {
+    "created": "2025-11-26T00:31:12.248Z",
+    "editedBy": "annotator-v1"
+  }
+}
