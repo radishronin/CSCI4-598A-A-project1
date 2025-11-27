@@ -28,17 +28,15 @@
       <div class="planner-map" aria-labelledby="planner-map-label planner-map-caption">
         <p id="planner-map-label" class="planner-section-label">Map</p>
         <div class="map-wrapper">
-          <div class="map-canvas">
-            <img id="campus-map"
-                 src="{{ url_for('planner.campus_map') }}"
-                 width="{{ image.width_px }}"
-                 height="{{ image.height_px }}"
-                 alt="Campus map" />
-            <svg id="route-overlay"
-                 class="route-overlay"
-                 viewBox="0 0 {{ image.width_px }} {{ image.height_px }}"
-                 preserveAspectRatio="xMidYMid meet"></svg>
-          </div>
+          <img id="campus-map"
+               src="{{ url_for('planner.campus_map') }}"
+               width="{{ image.width_px }}"
+               height="{{ image.height_px }}"
+               alt="Campus map" />
+          <svg id="route-overlay"
+               class="route-overlay"
+               viewBox="0 0 {{ image.width_px }} {{ image.height_px }}"
+               preserveAspectRatio="xMidYMid meet"></svg>
         </div>
         <p id="planner-map-caption" class="planner-caption">
           The map shows the shortest path between your selected buildings.

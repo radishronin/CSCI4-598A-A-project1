@@ -1,20 +1,11 @@
 .map-wrapper {
   position: relative;
   display: inline-block;
-  width: 100%;
-  overflow: hidden;
-}
-
-.map-canvas {
-  position: relative;
-  display: block;
-  width: 100%;
-  transform-origin: top left;
 }
 
 .map-wrapper img {
   display: block;
-  width: 100%;
+  max-width: 100%;
   height: auto;
 }
 
