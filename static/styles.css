@@ -25,6 +25,60 @@ body {
   box-shadow: 0 2px 20px rgba(0,0,0,0.08);
 }
 
+/* Dark mode overrides - applied when the documentElement has class 'dark' */
+.dark body {
+  background-color: #0b1220;
+  color: #d6dbe0;
+}
+
+.dark .container, .dark main.container {
+  background: #07101a;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.6);
+}
+
+.dark label, .dark p, .dark li, .dark .intro {
+  color: #cbd5e1;
+}
+
+.dark textarea, .dark input[type="text"], .dark select {
+     background: #0f1724;
+     color: #e6eef6;
+     border: 1.5px solid rgba(255,255,255,0.06);
+}
+
+.dark .output-box {
+  background: #071022;
+  border-color: rgba(255,255,255,0.04);
+  color: #dbeafe;
+}
+
+.dark button, .dark .btn {
+  background: linear-gradient(135deg, #0ea5a5, #0369a1);
+  color: #07101a;
+}
+
+.dark .btn.secondary {
+  background: transparent;
+  color: #7dd3fc;
+  border-color: rgba(125,211,252,0.18);
+}
+
+.dark .radio-option {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  color: #e6eef6;
+}
+
+.dark .modal-content {
+  background: #07101a;
+  border-color: rgba(255,255,255,0.04);
+}
+
+/* Smooth transition when toggling */
+html, body, .container, .output-box, textarea, select, .radio-option, .btn {
+  transition: background-color 240ms ease, color 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+}
+
 h1 {
   font-size: 2.5rem;
   font-weight: bold;

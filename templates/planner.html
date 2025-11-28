@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='planner.css') }}">
   <script src="{{ url_for('static', filename='planner.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='darkmode.js') }}" defer></script>
 </head>
 <body>
   <main class="container planner-container" role="main">
@@ -21,6 +22,9 @@
       <div class="planner-actions">
         <a class="btn secondary" href="{{ url_for('planner.annotator') }}">Use Custom Map Annotator</a>
         <a class="btn secondary" href="{{ url_for('rag.rag') }}">Back to RAG Assistant</a>
+      </div>
+      <div style="position: absolute; top: 22px; right: 22px;">
+        <button id="dark-mode-toggle" class="btn secondary" aria-pressed="false">Dark</button>
       </div>
     </header>
 

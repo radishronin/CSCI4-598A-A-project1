@@ -19,6 +19,9 @@
         <a class="btn secondary" href="{{ url_for('rag.planner') }}">Try Campus Path Planner</a>
         <a class="btn" href="{{ url_for('rag.notes') }}">Notes</a>
       </div>
+      <div style="position: absolute; top: 18px; right: 22px;">
+        <button id="dark-mode-toggle" class="btn secondary" aria-pressed="false">Dark</button>
+      </div>
     </header>
 
     <section class="row" aria-labelledby="prompt-label">
@@ -124,6 +127,7 @@
     </div>
   </div>
   <!-- Add all JS functions here -->
+  <script src="{{ url_for('static', filename='darkmode.js') }}"></script>
   <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>
