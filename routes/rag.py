@@ -42,6 +42,15 @@ is_first_embed_run = 1
 # Notes storage file (simple JSON store)
 NOTES_FILE = os.path.join(".", "notes.json")
 
+# Instruction to force the agent to call the retrieval tool for every user query
+RAG_TOOL_ENFORCE_INSTRUCTION = (
+    "IMPORTANT: This is a Retrieval-Augmented Generation (RAG) assistant. For EVERY user "
+    "question you MUST call the tool named 'RAG_Document_Search' to fetch relevant passages "
+    "from the uploaded document store before producing an answer. Use the retrieved passages "
+    "as evidence and prefer them over model-only speculation. If no relevant passages are "
+    "found, say so and do not invent facts."
+)
+
 @rag_bp.route("/")
 def rag():
     """Render the planner template."""
@@ -467,9 +476,7 @@ def receive_prompt():
                                     meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                     text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                     score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                    # Prepare a safe, single-line snippet for logging
-                                    text_snippet = ((text or '')[:200]).replace('\n', ' ')
-                                    print("  %s. score=%s metadata=%s text_snippet=%s" % (i, score, meta, text_snippet))
+                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:200]).replace('\n',' ')}")
                                 except Exception as e:
                                     print(f"  {i}. <failed to print node>: {e}")
                         else:
@@ -531,9 +538,7 @@ def receive_prompt():
                                     meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                     text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                     score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                    # Prepare a safe, single-line snippet for logging
-                                    text_snippet = ((text or '')[:300]).replace('\n', ' ')
-                                    print("  %s. score=%s metadata=%s text_snippet=%s" % (i, score, meta, text_snippet))
+                                    print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
                                 except Exception as e:
                                     print(f"  {i}. <failed to print node>: {e}")
                         else:
@@ -546,8 +551,12 @@ def receive_prompt():
 
         query_tool_config = IndexToolConfig(
             query_engine = query_engine,
-            name = "CustomizedQueryingTool",
-            description=f"Performs retrieval-augmented generation from {llm_choice} vector store.",
+            name = "RAG_Document_Search",
+            description=(
+                "Use this tool to search the uploaded document store for passages relevant to the user's question. "
+                "ALWAYS call this tool for factual, document-based, or specific queries about uploaded content. "
+                "Return retrieved passages and metadata and use them as evidence when composing answers."
+            ),
         )
 
         query_engine_tool = LlamaIndexTool.from_tool_config(query_tool_config)
@@ -588,9 +597,7 @@ def receive_prompt():
                                                 meta = getattr(n, 'metadata', None) or (n.get('metadata') if isinstance(n, dict) else None)
                                                 text = getattr(n, 'text', None) or (n.get('text') if isinstance(n, dict) else None)
                                                 score = getattr(n, 'score', None) if hasattr(n, 'score') else (n.get('score') if isinstance(n, dict) else None)
-                                                # Prepare a safe, single-line snippet for logging
-                                                text_snippet = ((text or '')[:300]).replace('\n', ' ')
-                                                print("  %s. score=%s metadata=%s text_snippet=%s" % (i, score, meta, text_snippet))
+                                                print(f"  {i}. score={score} metadata={meta} text_snippet={((text or '')[:300]).replace('\n',' ')}")
                                             except Exception as e:
                                                 print(f"  {i}. <failed to print node>: {e}")
                                     else:
@@ -607,6 +614,7 @@ def receive_prompt():
                         break
 
             _wrap_tool_invocation(query_engine_tool)
+        
         except Exception as e:
             print("[RAG TOOL DEBUG] Exception while attempting to wrap tool invocations:", e)
 
@@ -618,6 +626,15 @@ def receive_prompt():
         )
         print("Agent made")
         logger.debug("Agent created for llm_choice=%s", llm_choice)
+
+        # Prepend a strong instruction so the agent knows this is a RAG system and
+        # must call the retrieval tool for every user query.
+        try:
+            prompt_text = RAG_TOOL_ENFORCE_INSTRUCTION + "\n\n" + prompt_text
+        except Exception:
+            # If anything goes wrong prepending the instruction, continue with the original prompt
+            pass
+
         # If a target language is requested, prepend a clear instruction so the LLM
         # produces output in that language. Use a small mapping for friendly names.
         if target_language:

@@ -45,11 +45,6 @@
     const targetLanguage = document.getElementById('language-select')?.value || 'en';
     const responseMode = document.getElementById('mode-select')?.value || 'direct';
 
-    if (!llmChoice) {
-      alert('Please select an LLM.');
-      return;
-    }
-
     if (!value) {
       alert('Please input something.')
       return;
@@ -62,7 +57,7 @@
     showSpinner();
     
     try {
-      const res = await fetch('/api/prompt', {
+      const res = await fetch('/rag/api/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -165,7 +160,7 @@
     }
     
     try {
-      const response = await fetch('/api/set-api-key', {
+      const response = await fetch('/rag/api/set-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -363,7 +358,7 @@
     await Promise.all(fileReadPromises);
 
     try {
-      const response = await fetch('/api/upload-files', {
+      const response = await fetch('/rag/api/upload-files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file_paths: filePaths, llmChoice : llmChoice })
