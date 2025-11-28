@@ -68,16 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Read language, response mode and llm controls if present
     const langSelect = document.getElementById('planner-language');
     const modeSelect = document.getElementById('planner-response-mode');
-    const llmSelect = document.querySelector('input[name="planner-llm-choice"]:checked');
     const target_language = langSelect ? langSelect.value : '';
     const response_mode = modeSelect ? modeSelect.value : 'direct';
-    const llm_choice = llmSelect ? llmSelect.value : '';
-
-    // Require an LLM selection to avoid ambiguous requests
-    if (!llm_choice) {
-      showError('Please select an LLM before generating the route.');
-      return;
-    }
 
     try {
       const response = await fetch('/planner/route', {
@@ -85,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ buildings: codes, target_language, response_mode, llm_choice }),
+        body: JSON.stringify({ buildings: codes, target_language, response_mode }),
       });
 
       if (!response.ok) {
@@ -126,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     generateBtn.addEventListener('click', handleGenerate);
   }
   // Initialize planner LLM indicator and set button
+  /*
   (function initPlannerLlm(){
     const indicator = document.getElementById('planner-current-llm-indicator');
     const stored = localStorage.getItem('selected_llm');
@@ -144,4 +137,5 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   })();
+  */
 });
