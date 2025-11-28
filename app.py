@@ -32,13 +32,15 @@ import traceback
 
 app = Flask(__name__)
 
-# Register modular route blueprints (RAG is implemented as a blueprint)
+# Register modular route blueprints (RAG, planner, home are implemented as blueprints)
 try:
-    from routes import rag_bp
+    from routes import rag_bp, planner_bp, home_bp
     app.register_blueprint(rag_bp)
+    app.register_blueprint(planner_bp)
+    app.register_blueprint(home_bp)
 except Exception:
     # If blueprint import fails, continue — routes may be defined inline.
-    logger.debug("Could not register rag blueprint; continuing without it.")
+    logger.debug("Could not register one or more blueprints; continuing with inline routes if present.")
 
 # Application logger (console + optional file). Use DEBUG when requested.
 logger = logging.getLogger("vibe_app")
@@ -254,15 +256,6 @@ def homepage():
     """ Render the homepage.html template """
     return render_template("homepage.html")
 
-
-@app.route("/planner")
-def planner():
-    """Placeholder route for planner (some templates reference this)."""
-    try:
-        return render_template("planner.html")
-    except Exception:
-        # Fallback simple response if the planner template isn't present
-        return "Planner page (template missing).", 200
 
 @app.route("/index")
 def index():
