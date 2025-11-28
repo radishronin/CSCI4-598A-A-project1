@@ -627,65 +627,65 @@ def receive_prompt():
         print("Agent made")
         logger.debug("Agent created for llm_choice=%s", llm_choice)
 
-        # Prepend a strong instruction so the agent knows this is a RAG system and
-        # must call the retrieval tool for every user query.
+        # Build a system-level instruction (enforcement + optional language rules)
+        # so the model treats these as instructions rather than content to echo/translate.
         try:
-            prompt_text = RAG_TOOL_ENFORCE_INSTRUCTION + "\n\n" + prompt_text
-        except Exception:
-            # If anything goes wrong prepending the instruction, continue with the original prompt
-            pass
+            system_parts = [RAG_TOOL_ENFORCE_INSTRUCTION]
+            lang_name = None
 
-        # If a target language is requested, prepend a clear instruction so the LLM
-        # produces output in that language. Use a small mapping for friendly names.
-        if target_language:
-            language_map = {
-                "en": "English",
-                "es": "Spanish",
-                "fr": "French",
-                "de": "German",
-                "zh": "Chinese (Mandarin)",
-                "hi": "Hindi",
-                "ar": "Arabic",
-                "pt": "Portuguese",
-                "ru": "Russian",
-                "it": "Italian",
-                "ja": "Japanese",
-                "ko": "Korean",
-                "tr": "Turkish",
-                "nl": "Dutch",
-                "sv": "Swedish",
-                "pl": "Polish",
-                "vi": "Vietnamese",
-                "th": "Thai",
-                "id": "Indonesian",
-                "bn": "Bengali",
-                "ur": "Urdu",
-                "fa": "Persian",
-                "he": "Hebrew",
-                "ro": "Romanian",
-                "cs": "Czech",
-                "el": "Greek",
-                "hu": "Hungarian",
-                "no": "Norwegian",
-                "sk": "Slovak"
-            }
-            lang_name = language_map.get(target_language, target_language)
-            # Build instructions depending on response_mode
-            if response_mode == "both":
-                # Ask the agent to provide the primary answer, then a clear translated
-                # section. We include markers so the client/user can split them if needed.
-                prompt_text = (
-                    f"Provide a complete answer to the user's question.\n\n"
-                    f"After the full answer, insert a line that says '---TRANSLATION ({lang_name})---' "
-                    f"and then provide a translation of the full answer into {lang_name}. "
-                    f"Do not include any additional commentary.\n\nUser prompt:\n{prompt_text}"
-                )
-            else:
-                # Strong instruction ensures the agent replies only in the requested language.
-                prompt_text = (
-                    f"Please respond ONLY in {lang_name}. All output should be in {lang_name}.\n\n"
-                    f"User prompt:\n{prompt_text}"
-                )
+            # If a target language is requested, append instructions to the system message
+            if target_language:
+                language_map = {
+                    "en": "English",
+                    "es": "Spanish",
+                    "fr": "French",
+                    "de": "German",
+                    "zh": "Chinese (Mandarin)",
+                    "hi": "Hindi",
+                    "ar": "Arabic",
+                    "pt": "Portuguese",
+                    "ru": "Russian",
+                    "it": "Italian",
+                    "ja": "Japanese",
+                    "ko": "Korean",
+                    "tr": "Turkish",
+                    "nl": "Dutch",
+                    "sv": "Swedish",
+                    "pl": "Polish",
+                    "vi": "Vietnamese",
+                    "th": "Thai",
+                    "id": "Indonesian",
+                    "bn": "Bengali",
+                    "ur": "Urdu",
+                    "fa": "Persian",
+                    "he": "Hebrew",
+                    "ro": "Romanian",
+                    "cs": "Czech",
+                    "el": "Greek",
+                    "hu": "Hungarian",
+                    "no": "Norwegian",
+                    "sk": "Slovak"
+                }
+                lang_name = language_map.get(target_language, target_language)
+
+                if response_mode == "both":
+                    system_parts.append(
+                        f"Provide a complete answer to the user's question. After the full answer, "
+                        f"insert a line that says '---TRANSLATION ({lang_name})---' and then provide a "
+                        f"translation of the full answer into {lang_name}. Do not include any additional commentary."
+                    )
+                else:
+                    system_parts.append(f"Please respond ONLY in {lang_name}. All output should be in {lang_name}.")
+
+            # Build the final structured messages list for the agent
+            system_content = "\n\n".join(system_parts)
+            messages = [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": prompt_text}
+            ]
+        except Exception:
+            # If anything goes wrong, fall back to a simple user message
+            messages = [{"role": "user", "content": prompt_text}]
         
         # Mock LLM mode: allow testing without external API calls. Enable by setting
         # the environment variable MOCK_LLM=1 or including {"mock": true} in the POST body.
@@ -720,7 +720,7 @@ def receive_prompt():
             # Optional: small preamble so client can clear UI
             yield ""
 
-            for step in langchain_agent.stream({"messages": [prompt_text]}, stream_mode="values"):
+            for step in langchain_agent.stream({"messages": messages}, stream_mode="values"):
                 # Optional stream-step debugging: when RAG_DEBUG=1, print step summary
                 if os.getenv("RAG_DEBUG", "0") == "1":
                     try:
