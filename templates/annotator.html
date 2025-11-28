@@ -7,11 +7,15 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='annotator.css') }}">
   <script src="{{ url_for('static', filename='annotator.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='darkmode.js') }}" defer></script>
 </head>
 <body class="annotator-page">
   <main class="container annotator-container" role="main">
     <header class="annotator-header">
       <a href="{{ url_for('planner.planner') }}" class="btn secondary back-button">← Back to Planner</a>
+      <div style="position: absolute; top: 18px; right: 22px;">
+        <button id="dark-mode-toggle" class="btn secondary" aria-pressed="false">Dark</button>
+      </div>
       <div class="annotator-title-group">
         <h1>Campus Graph Annotator</h1>
         <p class="annotator-intro">Prepare custom map overlays and annotations for your campus routes.</p>

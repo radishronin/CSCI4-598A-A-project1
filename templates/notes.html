@@ -20,6 +20,9 @@
       <div class="actions">
         <a href="{{ url_for('rag.rag') }}" class="btn">Back to Interface</a>
       </div>
+      <div style="position: absolute; top: 18px; right: 22px;">
+        <button id="dark-mode-toggle" class="btn secondary" aria-pressed="false">Dark</button>
+      </div>
     </header>
 
     <section class="row" aria-labelledby="notes-label">
@@ -39,6 +42,7 @@
   </main>
 
   <!-- Include the main frontend script which contains notes handlers -->
+  <script src="{{ url_for('static', filename='darkmode.js') }}"></script>
   <script src="{{ url_for('static', filename='index.js') }}"></script>
 </body>
 </html>
