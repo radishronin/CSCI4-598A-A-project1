@@ -378,8 +378,8 @@ def receive_prompt():
     # The raw user prompt text (what the user typed in the UI)
     prompt_text = data.get("prompt", "")
 
-    # Which LLM backend the user selected (e.g., 'gemini' or 'openai')
-    llm_choice = data.get("llm_choice", "")
+    # Which LLM backend the user selected (e.g., 'gemini')
+    llm_choice = data.get("llm_choice", "gemini")
 
     # Accept either 'target_language' or 'language' from the frontend for
     # backward compatibility with different client payloads.
@@ -737,7 +737,7 @@ def receive_prompt():
 def set_api_key():
     """ Set the API key for the selected LLM """
     data = request.get_json(silent=True) or {}
-    llm_choice = data.get("llm_choice", "")
+    llm_choice = data.get("llm_choice", "gemini")
     api_key = data.get("api_key", "")
   
     if llm_choice == "":
@@ -757,7 +757,7 @@ def upload_files():
     """ Handle file uploads and print file information """
     data = request.get_json(silent=True) or {}
     files = data.get("file_paths", [])
-    llm_choice = data.get("llmChoice", "")
+    llm_choice = data.get("llmChoice", "gemini")
     
     api_key: str = get_environment_api_key(llm_choice)
     if api_key == "":
@@ -1023,7 +1023,7 @@ def scrape_url():
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
     insert = bool(data.get("insert", False))
-    llm_choice = data.get("llm_choice", "")
+    llm_choice = data.get("llm_choice", "gemini")
 
     if not url:
         return jsonify({"ok": False, "error": "No URL provided."}), 400

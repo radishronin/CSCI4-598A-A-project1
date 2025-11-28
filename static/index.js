@@ -41,10 +41,9 @@
 
   async function submitPrompt() {
     const value = (textarea && 'value' in textarea) ? textarea.value.trim() : '';
-  // Prefer checked radio; fallback to stored selection
-  const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value || localStorage.getItem('selected_llm');
-  const targetLanguage = document.getElementById('language-select')?.value || 'en';
-  const responseMode = document.getElementById('mode-select')?.value || 'direct';
+    // Prefer checked radio; fallback to stored selection
+    const targetLanguage = document.getElementById('language-select')?.value || 'en';
+    const responseMode = document.getElementById('mode-select')?.value || 'direct';
 
     if (!llmChoice) {
       alert('Please select an LLM.');
@@ -56,7 +55,6 @@
       return;
     }
     
-    currentLLMChoice = llmChoice;
     currentPrompt = value;
 
     // Clear output and show spinner
@@ -69,7 +67,6 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           prompt: value, 
-          llm_choice: llmChoice, 
           target_language: targetLanguage,
           response_mode: responseMode
         })
@@ -82,7 +79,7 @@
         const payload = await res.json();
         if (payload && payload.error === 'NO API key set.') {
           hideSpinner();
-          showApiKeyModal(llmChoice);
+          showApiKeyModal("gemini");
           document.getElementById('prompt-input').value = '';
           return;
         }
@@ -121,6 +118,7 @@
     document.getElementById('prompt-input').value = '';
   }
 
+  /*
   // Initialize LLM indicator from localStorage and wire Set LLM button
   (function initLlmSetter(){
     const indicator = document.getElementById('current-llm-indicator');
@@ -140,6 +138,7 @@
       });
     }
   })();
+  */
 
   function showApiKeyModal(llmChoice) {
     const modal = document.getElementById('api-key-modal');
@@ -170,7 +169,6 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          llm_choice: currentLLMChoice, 
           api_key: apiKey 
         })
       });
