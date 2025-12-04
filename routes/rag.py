@@ -418,7 +418,8 @@ def receive_prompt():
         if llm_choice == "gemini":
             langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
                 model=GEMINI_MODEL,
-                google_api_key=api_key
+                google_api_key=api_key,
+                temperature = 0.1
             )
         else:
             return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
