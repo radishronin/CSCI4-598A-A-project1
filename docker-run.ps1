@@ -11,6 +11,7 @@ Set-Location $scriptDir
 Write-Host "`nCreating directories..." -ForegroundColor Yellow
 $ragDir = Join-Path $scriptDir "rag_documents"
 $apiKeysDir = Join-Path $scriptDir "api_keys"
+$resourcesDir = Join-Path $scriptDir "resources"
 
 if (-not (Test-Path $ragDir)) {
     New-Item -ItemType Directory -Path $ragDir | Out-Null
@@ -24,6 +25,13 @@ if (-not (Test-Path $apiKeysDir)) {
     Write-Host "  Created: api_keys/" -ForegroundColor Green
 } else {
     Write-Host "  api_keys/ already exists" -ForegroundColor Gray
+}
+
+if (-not (Test-Path $resourcesDir)) {
+    New-Item -ItemType Directory -Path $resourcesDir | Out-Null
+    Write-Host "  Created: resources/" -ForegroundColor Green
+} else {
+    Write-Host "  resources/ already exists" -ForegroundColor Gray
 }
 
 # Docker image name
@@ -54,11 +62,13 @@ if ($existingContainer -eq $containerName) {
 # Docker on Windows can handle both forward and backslashes, but let's use forward slashes
 $ragDirMount = $ragDir -replace '\\', '/'
 $apiKeysDirMount = $apiKeysDir -replace '\\', '/'
+$resourcesDirMount = $resourcesDir -replace '\\', '/'
 
 # Run the Docker container with volume mounts
 Write-Host "`nRunning Docker container: $containerName" -ForegroundColor Yellow
 Write-Host "  Mounting rag_documents: $ragDirMount -> /app/rag_documents" -ForegroundColor Gray
 Write-Host "  Mounting api_keys: $apiKeysDirMount -> /app/api_keys" -ForegroundColor Gray
+Write-Host "  Mounting resources: $resourcesDirMount -> /app/resources" -ForegroundColor Gray
 Write-Host "  Port mapping: 5000:5000" -ForegroundColor Gray
 Write-Host ""
 
@@ -73,6 +83,7 @@ docker run -d `
     -p 5000:5000 `
     -v "${ragDirMount}:/app/rag_documents" `
     -v "${apiKeysDirMount}:/app/api_keys" `
+    -v "${resourcesDirMount}:/app/resources" `
     $imageName
 
 if ($LASTEXITCODE -ne 0) {

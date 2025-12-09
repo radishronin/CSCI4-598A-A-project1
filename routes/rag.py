@@ -40,7 +40,9 @@ API_KEY_PATH = "./api_keys"
 is_first_llm_run = 1
 is_first_embed_run = 1
 # Notes storage file (simple JSON store)
-NOTES_FILE = os.path.join(".", "notes.json")
+BASE_DIR = Path(__file__).resolve().parent.parent
+NOTES_DIR = BASE_DIR / "resources"
+NOTES_FILE = NOTES_DIR / "notes.json"
 
 # Instruction to force the agent to call the retrieval tool for every user query
 RAG_TOOL_ENFORCE_INSTRUCTION = (
@@ -294,7 +296,7 @@ def _message_to_text(msg) -> str:
 def _load_notes():
     """Load notes list from NOTES_FILE. Returns list of note dicts."""
     try:
-        if not os.path.exists(NOTES_FILE):
+        if not NOTES_FILE.exists():
             return []
         with open(NOTES_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -309,7 +311,8 @@ def _load_notes():
 def _save_notes(notes):
     """Persist notes list to NOTES_FILE atomically."""
     try:
-        tmp = NOTES_FILE + ".tmp"
+        NOTES_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = NOTES_FILE.with_suffix(".json.tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(notes, f, ensure_ascii=False, indent=2)
         os.replace(tmp, NOTES_FILE)

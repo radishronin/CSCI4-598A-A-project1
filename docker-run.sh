@@ -21,6 +21,7 @@ cd "$script_dir"
 echo -e "\n${YELLOW}Creating directories...${RESET}"
 rag_dir="$script_dir/rag_documents"
 api_keys_dir="$script_dir/api_keys"
+resources_dir="$script_dir/resources"
 
 if [ ! -d "$rag_dir" ]; then
   mkdir -p "$rag_dir"
@@ -34,6 +35,13 @@ if [ ! -d "$api_keys_dir" ]; then
   echo -e "  ${GREEN}Created: api_keys/${RESET}"
 else
   echo -e "  ${GRAY}api_keys/ already exists${RESET}"
+fi
+
+if [ ! -d "$resources_dir" ]; then
+  mkdir -p "$resources_dir"
+  echo -e "  ${GREEN}Created: resources/${RESET}"
+else
+  echo -e "  ${GRAY}resources/ already exists${RESET}"
 fi
 
 image_name="csci-rag-app"
@@ -58,10 +66,12 @@ fi
 # Use the path as-is; Docker on Linux/macOS accepts absolute paths, Docker Desktop handles Windows paths.
 rag_mount="$rag_dir"
 api_keys_mount="$api_keys_dir"
+resources_mount="$resources_dir"
 
 echo -e "\n${YELLOW}Running Docker container: ${container_name}${RESET}"
 echo -e "  Mounting rag_documents: ${GRAY}${rag_mount} -> /app/rag_documents${RESET}"
 echo -e "  Mounting api_keys: ${GRAY}${api_keys_mount} -> /app/api_keys${RESET}"
+echo -e "  Mounting resources: ${GRAY}${resources_mount} -> /app/resources${RESET}"
 echo -e "  Port mapping: ${GRAY}5000:5000${RESET}\n"
 
 if ! docker run -d \
@@ -69,6 +79,7 @@ if ! docker run -d \
     -p 5000:5000 \
     -v "${rag_mount}:/app/rag_documents" \
     -v "${api_keys_mount}:/app/api_keys" \
+    -v "${resources_mount}:/app/resources" \
     "$image_name"; then
   echo -e "\n${RED}Docker run failed!${RESET}" >&2
   exit 1

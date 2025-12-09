@@ -34,6 +34,9 @@ RUN mkdir -p api_keys/ rag_documents/
 COPY api_keys/ ./api_keys/
 COPY rag_documents/ ./rag_documents/
 
+# Mark data directories as volumes so they persist when containers are recreated
+VOLUME ["/app/api_keys", "/app/rag_documents", "/app/resources"]
+
 
 # Expose Flask default port
 EXPOSE 5000

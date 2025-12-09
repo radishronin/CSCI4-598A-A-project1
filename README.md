@@ -79,12 +79,13 @@ The application will be available at `http://localhost:5000`.
 
 #### Run with Persistent Storage
 
-To persist API keys and RAG documents across container restarts, use volume mounts:
+To persist API keys, RAG documents, and notes across container restarts, use volume mounts:
 
 ```bash
 docker run -p 5000:5000 \
   -v $(pwd)/api_keys:/app/api_keys \
-  -v $(pwd)/rag_documents:/app/rag_documents \
+   -v $(pwd)/rag_documents:/app/rag_documents \
+   -v $(pwd)/resources:/app/resources \
   llm-app
 ```
 
