@@ -51,6 +51,60 @@
   gap: 0.5rem;
 }
 
+.planner-translations {
+  margin-top: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.translation-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.translation-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.translation-card.active {
+  border-color: #2c7be5;
+  box-shadow: 0 4px 8px rgba(44, 123, 229, 0.18);
+}
+
+.translation-card__title {
+  font-weight: 700;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: 0.02em;
+}
+
+.translation-card__list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.translation-card__list dt {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.translation-card__list dd {
+  margin: 0 0 0.35rem 0;
+  color: #334155;
+  font-size: 0.95rem;
+}
+
 @media (min-width: 640px) {
   .planner-actions-row {
     align-items: center;

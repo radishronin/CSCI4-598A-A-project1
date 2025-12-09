@@ -171,75 +171,168 @@ def compute_route():
     target_language: str = data.get("target_language", "") or ""
     response_mode: str = data.get("response_mode", "direct")
 
-    def _localized_strings(lang: str) -> dict:
-        """Return a small set of localized UI strings for the planner.
+    translations = {
+        "": {
+            "total_time_label": "Total time:",
+            "minutes_unit": "min",
+            "error_invalid": "Request must include a list of building codes.",
+            "error_unknown_codes": "Unknown building codes:",
+            "error_no_path": "No available path between {from_code} and {to_code}.",
+        },
+        "en": {
+            "total_time_label": "Total time:",
+            "minutes_unit": "min",
+            "error_invalid": "Request must include a list of building codes.",
+            "error_unknown_codes": "Unknown building codes:",
+            "error_no_path": "No available path between {from_code} and {to_code}.",
+        },
+        "es": {
+            "total_time_label": "Tiempo total:",
+            "minutes_unit": "min",
+            "error_invalid": "La solicitud debe incluir una lista de códigos de edificio.",
+            "error_unknown_codes": "Códigos de edificio desconocidos:",
+            "error_no_path": "No hay un camino disponible entre {from_code} y {to_code}.",
+        },
+        "fr": {
+            "total_time_label": "Durée totale:",
+            "minutes_unit": "min",
+            "error_invalid": "La requête doit inclure une liste de codes de bâtiments.",
+            "error_unknown_codes": "Codes de bâtiment inconnus:",
+            "error_no_path": "Aucun itinéraire disponible entre {from_code} et {to_code}.",
+        },
+        "de": {
+            "total_time_label": "Gesamtzeit:",
+            "minutes_unit": "Min",
+            "error_invalid": "Die Anfrage muss eine Liste von Gebäudecodes enthalten.",
+            "error_unknown_codes": "Unbekannte Gebäudecodes:",
+            "error_no_path": "Kein verfügbarer Weg zwischen {from_code} und {to_code}.",
+        },
+        "zh": {
+            "total_time_label": "总用时:",
+            "minutes_unit": "分",
+            "error_invalid": "请求必须包含建筑代码列表。",
+            "error_unknown_codes": "未知的建筑代码:",
+            "error_no_path": "在 {from_code} 和 {to_code} 之间没有可用路径。",
+        },
+    }
 
-        This is intentionally minimal: it covers the total-time label and
-        a few common error messages. If you want richer translations we can
-        either extend this map or call the project's LLM translation helper.
-        """
-        # Basic translations for a few languages. Keys: total_time_label,
-        # minutes_unit, total_time_format (optional), error messages.
-        translations = {
-            "": {
-                "total_time_label": "Total time:",
-                "minutes_unit": "min",
-                "error_invalid": "Request must include a list of building codes.",
-                "error_unknown_codes": "Unknown building codes:",
-                "error_no_path": "No available path between {from_code} and {to_code}.",
-            },
-            "en": {
-                "total_time_label": "Total time:",
-                "minutes_unit": "min",
-                "error_invalid": "Request must include a list of building codes.",
-                "error_unknown_codes": "Unknown building codes:",
-                "error_no_path": "No available path between {from_code} and {to_code}.",
-            },
-            "es": {
-                "total_time_label": "Tiempo total:",
-                "minutes_unit": "min",
-                "error_invalid": "La solicitud debe incluir una lista de códigos de edificio.",
-                "error_unknown_codes": "Códigos de edificio desconocidos:",
-                "error_no_path": "No hay un camino disponible entre {from_code} y {to_code}.",
-            },
-            "fr": {
-                "total_time_label": "Durée totale:",
-                "minutes_unit": "min",
-                "error_invalid": "La requête doit inclure une liste de codes de bâtiments.",
-                "error_unknown_codes": "Codes de bâtiment inconnus:",
-                "error_no_path": "Aucun itinéraire disponible entre {from_code} et {to_code}.",
-            },
-            "de": {
-                "total_time_label": "Gesamtzeit:",
-                "minutes_unit": "Min",
-                "error_invalid": "Die Anfrage muss eine Liste von Gebäudecodes enthalten.",
-                "error_unknown_codes": "Unbekannte Gebäudecodes:",
-                "error_no_path": "Kein verfügbarer Weg zwischen {from_code} und {to_code}.",
-            },
-            "zh": {
-                "total_time_label": "总用时:",
-                "minutes_unit": "分",
-                "error_invalid": "请求必须包含建筑代码列表。",
-                "error_unknown_codes": "未知的建筑代码:",
-                "error_no_path": "在 {from_code} 和 {to_code} 之间没有可用路径。",
-            }
-        }
-        return translations.get(lang, translations.get(lang.split('-')[0], translations[""]))
+    field_labels = {
+        "": {
+            "total_time_label": "Total time label",
+            "total_time_label_filled": "Total time",
+            "minutes_unit": "Minutes unit",
+            "total_time_format": "Total time format",
+            "error_invalid": "Invalid request message",
+            "error_unknown_codes": "Unknown codes message",
+            "error_no_path": "No path message",
+            "error_message": "Error message",
+        },
+        "en": {
+            "total_time_label": "Total time label",
+            "total_time_label_filled": "Total time",
+            "minutes_unit": "Minutes unit",
+            "total_time_format": "Total time format",
+            "error_invalid": "Invalid request message",
+            "error_unknown_codes": "Unknown codes message",
+            "error_no_path": "No path message",
+            "error_message": "Error message",
+        },
+        "es": {
+            "total_time_label": "Etiqueta de tiempo total",
+            "total_time_label_filled": "Tiempo total",
+            "minutes_unit": "Unidad de minutos",
+            "total_time_format": "Formato de tiempo total",
+            "error_invalid": "Mensaje de solicitud inválida",
+            "error_unknown_codes": "Mensaje de códigos desconocidos",
+            "error_no_path": "Mensaje de ruta no disponible",
+            "error_message": "Mensaje de error",
+        },
+        "fr": {
+            "total_time_label": "Libellé du temps total",
+            "total_time_label_filled": "Temps total",
+            "minutes_unit": "Unité de minutes",
+            "total_time_format": "Format de temps total",
+            "error_invalid": "Message de requête invalide",
+            "error_unknown_codes": "Message de codes inconnus",
+            "error_no_path": "Message d'itinéraire indisponible",
+            "error_message": "Message d'erreur",
+        },
+        "de": {
+            "total_time_label": "Gesamtzeit-Beschriftung",
+            "total_time_label_filled": "Gesamtzeit",
+            "minutes_unit": "Minuteneinheit",
+            "total_time_format": "Gesamtzeit-Format",
+            "error_invalid": "Nachricht für ungültige Anfrage",
+            "error_unknown_codes": "Nachricht für unbekannte Codes",
+            "error_no_path": "Nachricht für keinen verfügbaren Weg",
+            "error_message": "Fehlermeldung",
+        },
+        "zh": {
+            "total_time_label": "总用时标签",
+            "total_time_label_filled": "总用时",
+            "minutes_unit": "分钟单位",
+            "total_time_format": "总用时格式",
+            "error_invalid": "无效请求消息",
+            "error_unknown_codes": "未知代码消息",
+            "error_no_path": "无可用路径消息",
+            "error_message": "错误消息",
+        },
+    }
+
+    def _resolve_language(lang: str) -> Tuple[str, dict]:
+        """Return the best-match language code and its strings."""
+        normalized = (lang or "").lower()
+        if normalized in translations:
+            return normalized, translations[normalized]
+
+        base = normalized.split("-")[0]
+        if base in translations:
+            return base, translations[base]
+
+        return "", translations[""]
+
+    def _resolve_labels(lang: str) -> dict:
+        normalized = (lang or "").lower()
+        if normalized in field_labels:
+            return field_labels[normalized]
+        base = normalized.split("-")[0]
+        if base in field_labels:
+            return field_labels[base]
+        return field_labels[""]
 
     if not isinstance(building_codes, list) or not building_codes:
-        localized = _localized_strings(target_language)
+        lang_code, localized = _resolve_language(target_language)
+        labels = _resolve_labels(lang_code)
         return (
-            jsonify({"error": localized.get("error_invalid"), "localized": localized}),
+            jsonify({
+                "error": localized.get("error_invalid"),
+                "localized": {
+                    "language": lang_code,
+                    "strings": {"error_invalid": localized.get("error_invalid")},
+                    "labels": {"error_invalid": labels.get("error_invalid")},
+                },
+            }),
             400,
         )
 
     invalid_codes = [code for code in building_codes if code not in (_buildings_by_id or {})]
     if invalid_codes:
-        localized = _localized_strings(target_language)
+        lang_code, localized = _resolve_language(target_language)
+        labels = _resolve_labels(lang_code)
         return (
             jsonify({
                 "error": f"Unknown building codes: {', '.join(invalid_codes)}",
-                "localized": {"error_message": f"{localized.get('error_unknown_codes')} {', '.join(invalid_codes)}"},
+                "localized": {
+                    "language": lang_code,
+                    "strings": {
+                        "error_unknown_codes": localized.get("error_unknown_codes"),
+                        "error_message": f"{localized.get('error_unknown_codes')} {', '.join(invalid_codes)}",
+                    },
+                    "labels": {
+                        "error_unknown_codes": labels.get("error_unknown_codes"),
+                        "error_message": labels.get("error_message"),
+                    },
+                },
             }),
             400,
         )
@@ -254,11 +347,22 @@ def compute_route():
     for start_code, end_code in zip(building_codes, building_codes[1:]):
         leg_time, node_path = _shortest_path_between_buildings(start_code, end_code, adjacency)
         if leg_time is None or not node_path:
-            localized = _localized_strings(target_language)
+            lang_code, localized = _resolve_language(target_language)
+            labels = _resolve_labels(lang_code)
             return (
                 jsonify({
                     "error": f"No available path between {start_code} and {end_code}.",
-                    "localized": {"error_message": localized.get("error_no_path").format(from_code=start_code, to_code=end_code)},
+                    "localized": {
+                        "language": lang_code,
+                        "strings": {
+                            "error_no_path": localized.get("error_no_path"),
+                            "error_message": localized.get("error_no_path").format(from_code=start_code, to_code=end_code),
+                        },
+                        "labels": {
+                            "error_no_path": labels.get("error_no_path"),
+                            "error_message": labels.get("error_message"),
+                        },
+                    },
                 }),
                 400,
             )
@@ -294,7 +398,10 @@ def compute_route():
 
     image = graph.get("image", {})
 
-    localized = _localized_strings(target_language)
+    lang_code, localized = _resolve_language(target_language)
+    labels = _resolve_labels(lang_code)
+    minutes_value = total_time_s / 60 if total_time_s else 0.0
+    minutes_str = f"{minutes_value:.1f}"
 
     response_payload = {
         "image": {
@@ -304,25 +411,41 @@ def compute_route():
         },
         "legs": legs,
         "total_time_s": total_time_s,
-        "localized": {},
+        "localized": {
+            "language": lang_code,
+            "strings": {
+                "minutes_unit": localized.get("minutes_unit"),
+                "total_time_label": localized.get("total_time_label"),
+                "total_time_label_filled": f"{localized.get('total_time_label')} {minutes_str} {localized.get('minutes_unit', 'min')}",
+                "total_time_format": "{minutes} " + localized.get("minutes_unit", "min"),
+            },
+            "labels": {
+                "minutes_unit": labels.get("minutes_unit"),
+                "total_time_label": labels.get("total_time_label"),
+                "total_time_label_filled": labels.get("total_time_label_filled"),
+                "total_time_format": labels.get("total_time_format"),
+            },
+        },
     }
 
     # If the client requested 'both', include original (English) and localized
     # messages. Otherwise provide only localized strings to be used by the UI.
-    if response_mode == "both":
+    if response_mode == "both" and lang_code not in ("", "en"):
         response_payload["localized"]["original"] = {
-            "total_time_label": "Total time:",
-            "minutes_unit": "min",
-            "total_time_format": "{minutes} min",
+            "language": "en",
+            "strings": {
+                "minutes_unit": "min",
+                "total_time_label": "Total time:",
+                "total_time_label_filled": f"Total time: {minutes_str} min",
+                "total_time_format": "{minutes} min",
+            },
+            "labels": {
+                "minutes_unit": field_labels["en"].get("minutes_unit"),
+                "total_time_label": field_labels["en"].get("total_time_label"),
+                "total_time_label_filled": field_labels["en"].get("total_time_label_filled"),
+                "total_time_format": field_labels["en"].get("total_time_format"),
+            },
         }
-
-    # Add the selected language strings (these may be identical to original)
-    response_payload["localized"].update({
-        "total_time_label": localized.get("total_time_label"),
-        "minutes_unit": localized.get("minutes_unit"),
-        # Provide a simple formatting token the client can use if desired
-        "total_time_format": "{minutes} " + localized.get("minutes_unit", "min"),
-    })
 
     return jsonify(response_payload)
 
