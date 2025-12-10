@@ -681,7 +681,10 @@ def receive_prompt():
                 }
                 lang_name = language_map.get(target_language, target_language)
 
-                if response_mode == "both":
+                # Skip translation block if target language is English (avoid duplication)
+                if target_language == "en":
+                    system_parts.append("Please respond in English.")
+                elif response_mode == "both":
                     system_parts.append(
                         f"Provide a complete answer to the user's question. After the full answer, "
                         f"insert a line that says '---TRANSLATION ({lang_name})---' and then provide a "
