@@ -33,7 +33,7 @@ from llama_index.llms.google_genai import GoogleGenAI
 rag_bp = Blueprint("rag", __name__, url_prefix = "/rag")
 
 # Constants
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.5-flash"  # Changed from gemini-2.0-flash (quota was 0); 2.5-exp has 1M quota
 GEMINI_EMBEDDING_MODEL = "text-embedding-004"
 INDEX_PATH = "./rag_documents"
 API_KEY_PATH = "./api_keys"
@@ -418,15 +418,8 @@ def receive_prompt():
     try:
         # Log key request parameters (do NOT log raw API keys)
         logger.debug("/api/prompt called; llm_choice=%s target_language=%s response_mode=%s", llm_choice, target_language, response_mode)
-        if llm_choice == "gemini":
-            langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
-                model=GEMINI_MODEL,
-                google_api_key=api_key,
-                temperature = 0.1
-            )
-        else:
-            return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
-
+        
+        # Initialize LLM and embedding model FIRST (before creating any LLM instances)
         global is_first_llm_run
         if is_first_llm_run == 1:
             print("Initializing LLM")
@@ -438,6 +431,19 @@ def receive_prompt():
             print("Initializing embedding model")
             initialize_embedding_model(llm_choice)
             is_first_embed_run = 0
+        
+        # Now create the Langchain LLM instance for the agent
+        if llm_choice == "gemini":
+            langchain_llm: BaseChatModel = ChatGoogleGenerativeAI(
+                model=GEMINI_MODEL,
+                google_api_key=api_key,
+                temperature=0.1,
+                convert_system_message_to_human=True,
+                max_retries=5,
+                request_options={"timeout": 30}
+            )
+        else:
+            return jsonify({"ok": False, "error": "Invalid LLM selected."}), 400
 
         # Obtain VectorStoreIndex for this llm_choice (for file ingestion/RAG)
         vector_index = get_vector_index(llm_choice)
@@ -754,8 +760,19 @@ def receive_prompt():
     except Exception as e:
         # Print full traceback to server logs for debugging
         traceback.print_exc()
+        error_str = str(e)
+        
+        # Check for rate limit / quota errors from Gemini API
+        if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "quota" in error_str.lower():
+            logger.error("Rate limit/quota error from Gemini API: %s", error_str)
+            return jsonify({
+                "ok": False, 
+                "error": "Gemini API quota exceeded. Please check your billing/plan or wait for quota reset.",
+                "detail": error_str
+            }), 429
+        
         # Return JSON error so frontend can display a useful message
-        return jsonify({"ok": False, "error": "Internal server error.", "detail": str(e)}), 500
+        return jsonify({"ok": False, "error": "Internal server error.", "detail": error_str}), 500
 
 @rag_bp.route("/api/set-api-key", methods=["POST"])
 def set_api_key():

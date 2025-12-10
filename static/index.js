@@ -313,14 +313,6 @@
   loadNotes();
 
   async function handleFileSelection(event) {
-    const llmChoice = document.querySelector('input[name="llm-choice"]:checked')?.value;
-
-    if (!llmChoice) {
-      alert('Please select an LLM.');
-      fileInput.value = '';
-      return;
-    }
-
     const files = event.target.files;
 
     if (files.length === 0) {
@@ -361,16 +353,29 @@
       const response = await fetch('/rag/api/upload-files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file_paths: filePaths, llmChoice : llmChoice })
+        body: JSON.stringify({ file_paths: filePaths })
       });
       
       const result = await response.json();
       hideSpinner();
+      
+      if (!response.ok) {
+        if (result.error === 'NO API key set.') {
+          showApiKeyModal("gemini");
+          fileInput.value = '';
+          return;
+        }
+        alert('Error uploading files: ' + (result.error || 'Unknown error'));
+        fileInput.value = '';
+        return;
+      }
+      
       alert('File upload successful');
       fileInput.value = '';
     } catch (err) {
       hideSpinner();
       alert('Error uploading files: ' + (err?.message || String(err)));
+      fileInput.value = '';
     }
   }
 })();
