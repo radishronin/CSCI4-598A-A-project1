@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+type: software
+title: "Full-Stack LLMs Vibe Coding Project"
+authors:
+  - family-names: "Moy"
+    given-names: "Gabriel"
+  - family-names: "Kannady"
+    given-names: "Shaun"
+  - family-names: "Zustak"
+    given-names: "Nicholas"
+repository-code: "https://github.com/radishronin/CSCI4-598A-A-project1"
+description: |
+  A full-stack web application integrating large language models (LLMs) with a 
+  Flask backend and modern HTML/JavaScript frontend. Features include RAG 
+  (Retrieval-Augmented Generation) for document querying, a notes application, 
+  campus route planning using Dijkstra's algorithm, an interactive map annotator 
+  tool, multilingual support, and API key management for various LLM providers.
+keywords:
+  - Flask
+  - LLM
+  - RAG
+  - Retrieval-Augmented Generation
+  - LangChain
+  - LlamaIndex
+  - Google Generative AI
+  - Full-stack
+  - Web application
+  - Campus routing
+license: MIT
+version: 1.0.0
+date-released: 2025-12-12
