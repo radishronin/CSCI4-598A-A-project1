@@ -53,31 +53,17 @@ A full-stack web application that integrates large language models (LLMs) with a
 
 ### Getting a Free Google Gemini API Key
 
-The RAG system uses **Google Gemini** as its LLM backend. A free API key is required to use the application. Follow these steps:
+The RAG system uses **Google Gemini** as its LLM backend. A free API key is required to use the application. The easiest way to get one is through Google AI Studio:
 
-#### Step 1: Create a Google Cloud Project
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Click the project dropdown at the top
-3. Click "NEW PROJECT"
-4. Enter a project name (e.g., "Vibe RAG App")
-5. Click "CREATE"
-6. Wait for the project to be created, then select it from the dropdown
+#### Step 1: Visit Google AI Studio
+1. Go to [Google AI Studio API Keys](https://aistudio.google.com/app/api-keys)
+2. Sign in with your Google account (create one if needed)
+3. Click the **"Create API Key"** button
+4. If prompted, select or create a Google Cloud Project
+5. Your new API key will appear on the screen
+6. **Copy the key** to a safe location
 
-#### Step 2: Enable the Generative Language API
-1. In the Cloud Console, go to **APIs & Services > Library**
-2. Search for "Generative Language API"
-3. Click the result
-4. Click "ENABLE"
-5. Wait a few moments for the API to be enabled
-
-#### Step 3: Create an API Key
-1. Go to **APIs & Services > Credentials**
-2. Click "Create Credentials" at the top
-3. Select **API Key** from the dropdown
-4. A dialog will appear with your new API key
-5. **Copy the key** to a safe location
-
-#### Step 4: Add the Key to Your Application
+#### Step 2: Add the Key to Your Application
 Choose one of these options:
 
 **Option A: Via Web Interface (Easiest)**
@@ -98,13 +84,13 @@ Choose one of these options:
 
 #### Verify Your Setup
 - Free tier quotas are usually generous (1M+ requests per day)
-- If you get a 429 error, check your quota in **APIs & Services > Quotas** by filtering for `generativelanguage`
-- Make sure the API key is for the **correct project** where you enabled the Generative Language API
+- Test the connection by submitting a prompt in the RAG interface
+- If you get a 429 error, you may have hit quota limits (see Troubleshooting below)
 
 #### Troubleshooting
 - **"API key not found" error**: Check that `api_keys/gemini` exists and contains your key
-- **429 Quota Exceeded error**: Your quota limits may be set to 0 for certain models. Check **Quotas** and verify the model name matches (should be `gemini-2.5-flash`)
-- **API not enabled**: Re-check that you enabled the Generative Language API in your project
+- **429 Quota Exceeded error**: You may have hit your free tier quota limits. If you get persistent 429 errors, consider upgrading to a paid plan or requesting quota increase in Google Cloud Console
+- **Invalid API key error**: Verify you copied the entire key correctly from AI Studio with no extra spaces
 
 ---
 
