@@ -33,8 +33,86 @@ The application uses **Google Gemini** as its primary LLM backend with support f
 ### Supported LLM: Google Gemini
 
 **Models Used:**
-- **Chat Model**: `gemini-2.0-flash` (temperature: 0.1)
+- **Chat Model**: `gemini-2.5-flash` (temperature: 0.1)
 - **Embedding Model**: `text-embedding-004`
+
+### Getting a Free Google Gemini API Key
+
+A free API key is required to use the RAG system. Follow these steps:
+
+#### Step 1: Create a Google Cloud Project
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Click the project dropdown at the top left
+3. Click "NEW PROJECT"
+4. Enter a project name (e.g., "RAG Application")
+5. Click "CREATE"
+6. Wait for the project to be created, then select it from the dropdown
+
+#### Step 2: Enable the Generative Language API
+1. In the Cloud Console, go to **APIs & Services > Library**
+2. Search for "Generative Language API"
+3. Click the result
+4. Click "ENABLE"
+5. Wait for the API to be enabled (usually takes a few seconds)
+
+#### Step 3: Create an API Key
+1. Go to **APIs & Services > Credentials**
+2. Click "Create Credentials" at the top
+3. Select **API Key** from the dropdown
+4. A dialog will appear with your new API key
+5. **Copy the key** - you'll need it in the next step
+
+#### Step 4: Add the Key to Your Application
+Choose one of these methods:
+
+**Method 1: Via Web Interface (Recommended)**
+1. Start the application
+2. Navigate to `http://localhost:5000/rag`
+3. Attempt to submit a prompt
+4. An API key modal will appear automatically
+5. Paste your Gemini API key into the input field
+6. Click "Submit"
+7. Your key will be saved for future sessions
+
+**Method 2: Manual File Creation**
+1. Create the `api_keys/` directory if it doesn't exist:
+   ```bash
+   mkdir -p api_keys
+   ```
+2. Create a file named `gemini` in that directory:
+   ```bash
+   echo "your-api-key-here" > api_keys/gemini
+   ```
+3. Replace `your-api-key-here` with your actual API key
+
+#### Verify Your Setup
+- Check that the API key is stored correctly: `cat api_keys/gemini`
+- In the Cloud Console, verify that the Generative Language API shows as "ENABLED"
+- Test the connection by submitting a prompt in the RAG interface
+
+#### Troubleshooting Common Issues
+
+**429 Quota Exceeded Error**
+- Your quota for a model may be set to 0
+- Check **APIs & Services > Quotas** and filter for `generativelanguage`
+- Look for quotas related to your model (`gemini-2.5-flash`)
+- If quotas show `limit: 0`, ensure you're looking at the correct project
+- Consider upgrading to a paid plan or using a different project
+
+**"API key not found" Error**
+- Verify the file exists: `ls api_keys/gemini`
+- Check that the key is not empty: `cat api_keys/gemini`
+- Ensure the file is readable by the application user
+
+**API Not Enabled**
+- Return to the Cloud Console
+- Go to **APIs & Services > Library**
+- Search for and enable the "Generative Language API"
+
+**Wrong Model Selected**
+- The application uses `gemini-2.5-flash` by default
+- Check the model name in `routes/rag.py` (line 36: `GEMINI_MODEL = "gemini-2.5-flash"`)
+- Verify that model has a quota > 0 in the Quotas section
 
 ### API Key Setup
 
